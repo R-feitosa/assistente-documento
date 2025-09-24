@@ -1,0 +1,9 @@
+# Ambiente Virtual
+venv/
+__pycache__/
+
+# Arquivos de ambiente
+.env
+
+# Pasta de uploads (geralmente não versionada)
+uploads/

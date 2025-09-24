@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RFeitosa Group - Assistente de Automação</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Montserrat:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        /* Variáveis CSS para facilitar o gerenciamento das cores */
+        :root {
+            --primary-color: #700000; /* Vermelho escuro */
+            --secondary-color: #0A193F; /* Azul marinho */
+            --accent-color: #808080; /* Cinza */
+            --light-gray: #f0f0f5; /* Fundo mais claro */
+            --dark-text: #2c3e50; /* Texto escuro */
+            --light-text: #ffffff; /* Texto claro */
+        }
+
+        body {
+    font-family: 'Montserrat', sans-serif;
+    /* background-color: var(--light-gray); */ /* Você pode comentar ou remover esta linha */
+
+    background-image: url('../static/images/background3.png'); /* <-- Adicione esta linha */
+    background-size: cover; /* <-- Adicione esta linha: Cobre toda a área sem distorcer */
+    background-position: center center; /* <-- Adicione esta linha: Centraliza a imagem */
+    background-repeat: no-repeat; /* <-- Adicione esta linha: Evita que a imagem se repita */
+    background-attachment: fixed; /* <-- Adicione esta linha: Fixa o background ao rolar a página */
+
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
+    margin: 0;
+    padding: 2rem 1rem;
+    box-sizing: border-box;
+}
+
+        .container {
+            background: var(--light-text);
+            padding: 3rem;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            text-align: center;
+            width: 80%; /* Largura ajustada */
+            max-width: 1500px; /* Limite máximo aumentado */
+            box-sizing: border-box;
+            border: 1px solid #e0e0e0;
+            position: relative;
+        }
+        .container img {
+            max-width: 45%;
+            border-radius: 10px;
+        }
+        
+        h1 {
+            font-family: 'Orbitron', sans-serif;
+            color: var(--secondary-color);
+            margin-bottom: 1rem;
+            font-size: 2.5rem;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        p {
+            font-size: 1.1rem;
+            color: var(--dark-text);
+            line-height: 1.6;
+        }
+
+        #upload-form {
+            margin: 2.5rem 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        #file-input {
+            width: 100%;
+            padding: 1.5rem;
+            border: 2px dashed var(--accent-color);
+            border-radius: 8px;
+            cursor: pointer;
+            background-color: #fafafa;
+            color: var(--dark-text);
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+        #file-input::-webkit-file-upload-button {
+            visibility: hidden;
+            width: 0;
+        }
+        #file-input::before {
+            content: 'Selecione seus arquivos aqui (ou arraste e solte)';
+            display: inline-block;
+            background: var(--primary-color);
+            color: var(--light-text);
+            border: none;
+            border-radius: 5px;
+            padding: 10px 15px;
+            outline: none;
+            white-space: nowrap;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+            margin-right: 15px;
+            transition: background-color 0.3s ease;
+        }
+        #file-input:hover { 
+            border-color: var(--primary-color); 
+            box-shadow: 0 0 10px rgba(var(--primary-color), 0.3);
+        }
+        #file-input:hover::before {
+            background-color: #9c0000;
+        }
+        #file-input::file-selector-button {
+            display: none;
+        }
+
+        button, .download-btn {
+            background-image: linear-gradient(45deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            color: var(--light-text);
+            border: none;
+            padding: 12px 25px;
+            border-radius: 30px;
+            cursor: pointer;
+            font-size: 1.1rem;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            margin-top: 1rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            text-transform: uppercase;
+        }
+
+        button:hover, .download-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+            background-image: linear-gradient(45deg, #9c0000 0%, #0c204d 100%);
+        }
+
+        button:disabled {
+            background-image: linear-gradient(45deg, #a0a0a0 0%, #707070 100%);
+            cursor: not-allowed;
+            box-shadow: none;
+            transform: none;
+        }
+
+        #loading {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(5px);
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            border-radius: 12px;
+            text-align: center;
+            padding-top: 15%;
+        }
+        #loading img {
+            width: 900px; /* CORREÇÃO: Tamanho do GIF ajustado */
+            height: auto;
+            margin-bottom: 2.5rem;
+        }
+        #loading p {
+            margin: 0 auto;
+            font-size: 1.8rem; /* CORREÇÃO: Tamanho da fonte ajustado */
+            color: var(--secondary-color);
+            font-weight: 600;
+            max-width: 50%; /* CORREÇÃO: Largura máxima ajustada */
+           
+        }
+
+        #resultado { 
+            margin-top: 2.5rem; 
+            text-align: left; 
+            background: #fdfdfd; 
+            padding: 2rem; 
+            border-radius: 10px; 
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.05);
+            display: none; 
+            border: 1px solid #eee;
+        }
+        #resultado h3 {
+            color: var(--secondary-color);
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.8rem;
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+
+        .result-item { 
+            margin-bottom: 2rem; 
+            padding-bottom: 1.5rem;
+            border-bottom: 1px dashed #e0e0e0;
+        }
+        .result-item:last-child {
+            border-bottom: none;
+        }
+        .result-item p {
+            font-size: 1rem;
+            margin-bottom: 0.8rem;
+        }
+        .result-item strong {
+            color: var(--primary-color);
+        }
+        .result-item label { 
+            font-weight: 600; 
+            color: var(--secondary-color); 
+            display: block; 
+            margin-bottom: 8px; 
+            font-size: 0.95rem;
+        }
+        .copy-area { 
+            display: flex; 
+            align-items: center; 
+            gap: 10px;
+            margin-bottom: 1rem;
+        }
+        .copy-area input, .copy-area textarea { 
+        flex-grow: 1; 
+        padding: 10px; 
+        border: 1px solid #ccc; 
+        border-radius: 6px; 
+        background: #e9e9f0;
+        color: var(--dark-text);
+        font-size: 0.95rem;
+        font-family: 'Consolas', 'Monaco', monospace;
+        width: 100%; /* Garante que o textarea ocupe todo o espaço */
+        box-sizing: border-box; /* Evita problemas de dimensionamento */
+        }
+        .copy-area textarea {
+        resize: vertical; /* Permite ao usuário redimensionar apenas na vertical */
+        }
+        .copy-area button { 
+            font-size: 0.85rem; 
+            padding: 8px 15px; 
+            margin: 0; 
+            background-image: linear-gradient(45deg, var(--accent-color) 0%, #606060 100%);
+        }
+        .copy-area button:hover {
+            background-image: linear-gradient(45deg, #707070 0%, #505050 100%);
+        }
+
+        .result-item.error-message {
+            color: var(--primary-color);
+            background-color: #ffebeb;
+            border: 1px solid #ffcccc;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            font-weight: 600;
+        }
+        .reset-btn {
+            background-image: linear-gradient(45deg, var(--accent-color) 0%, #606060 100%);
+            display: block;
+            margin: 2rem auto 0 auto;
+        }
+        .reset-btn:hover {
+            background-image: linear-gradient(45deg, #707070 0%, #505050 100%);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <img src='../static/images/fundo4.png' alt="Feitosa Group Logo">
+        
+        <form id="upload-form">
+            <input type="file" id="file-input" name="arquivo" accept=".pdf,.docx,.jpg,.jpeg,.png" multiple required>
+            <button type="submit" id="submit-btn">Analisar Arquivos</button>
+        </form>
+
+        <div id="loading" style="display: none">
+            <img src="../static/images/loading.gif" alt="Processando...">
+            <p>Analisando os documentos com inteligência artificial. Isso pode levar alguns segundos por arquivo.</p>
+        </div>
+
+        <div id="resultado">
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('upload-form');
+        const fileInput = document.getElementById('file-input');
+        const submitBtn = document.getElementById('submit-btn');
+        const loadingDiv = document.getElementById('loading');
+        const resultadoDiv = document.getElementById('resultado');
+
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+
+            if (fileInput.files.length === 0) {
+                alert("Por favor, selecione um ou mais arquivos.");
+                return;
+            }
+
+            const formData = new FormData(form);
+
+            loadingDiv.style.display = 'block';
+            resultadoDiv.style.display = 'none';
+            resultadoDiv.innerHTML = '<h3>Análise Concluída:</h3>';
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Analisando...';
+
+            try {
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                const results = await response.json();
+
+                if (response.ok) {
+                    if (results.length === 0) {
+                        resultadoDiv.innerHTML += '<p>Nenhum arquivo processado com sucesso.</p>';
+                    }
+
+                    for (const result of results) {
+                        if(result.erro) {
+                            const errorHtml = `
+                                <div class="result-item error-message">
+                                    <p><strong>Erro no arquivo '${result.nome_original}':</strong> ${result.erro}</p>
+                                </div>
+                            `;
+                            resultadoDiv.innerHTML += errorHtml;
+                            continue;
+                        }
+                        
+                        const resultHtml = `
+                            <div class="result-item">
+                                <label>Novo Nome Sugerido:</label>
+                                <div class="copy-area">
+                                    <input type="text" value="${result.novo_nome}" readonly>
+                                    <button type="button" onclick="copiarTexto(this)">Copiar</button>
+                                </div>
+                                <label>Descrição:</label>
+                                <div class="copy-area">
+                                    <textarea rows="4" readonly>${result.descricao}</textarea>
+                                    <button type="button" onclick="copiarTexto(this)">Copiar</button>
+                                </div>
+                                
+                                <a href="/download/${result.novo_nome_servidor}" class="download-btn" download="${result.novo_nome}">Baixar Renomeado</a>
+                            </div>
+                        `;
+                        resultadoDiv.innerHTML += resultHtml;
+                    }
+
+                    resultadoDiv.innerHTML += '<button type="button" onclick="resetarPagina()" class="reset-btn">Analisar Novos Documentos</button>';
+                    resultadoDiv.style.display = 'block';
+
+                } else {
+                    alert('Erro no servidor: ' + results.erro);
+                }
+
+            } catch (error) {
+                console.error('Ocorreu um erro:', error);
+                alert('Ocorreu um erro de comunicação com o servidor.');
+            } finally {
+                loadingDiv.style.display = 'none';
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Analisar Arquivos';
+            }
+        });
+
+        function copiarTexto(buttonElement) {
+            const inputElement = buttonElement.previousElementSibling;
+            inputElement.select();
+            inputElement.setSelectionRange(0, 99999);
+            
+            try {
+                document.execCommand('copy');
+                alert('Texto copiado!');
+            } catch (err) {
+                alert('Não foi possível copiar o texto.');
+            }
+        }
+        function resetarPagina() {
+            const resultadoDiv = document.getElementById('resultado');
+            const fileInput = document.getElementById('file-input');
+
+            resultadoDiv.style.display = 'none';
+            fileInput.value = '';
+            document.getElementById('upload-form').scrollIntoView({ behavior: 'smooth' });
+        }
+    </script>
+</body>
+</html>
