@@ -1,0 +1,8 @@
+Flask
+PyMuPDF
+python-docx
+requests
+Pillow
+python-dotenv
+werkzeug
+gunicorn
