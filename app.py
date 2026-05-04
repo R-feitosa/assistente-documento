@@ -4,12 +4,21 @@ import docx
 import json
 import uuid
 import base64
+import hashlib
+import threading
+from concurrent.futures import ThreadPoolExecutor
 from io import BytesIO
 import requests
 from PIL import Image
 from flask import Flask, request, jsonify, render_template, send_from_directory
 from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
+
+try:
+    from unidecode import unidecode
+except ImportError:  # fallback se a dependência ainda não estiver instalada
+    def unidecode(s):
+        return s
 
 load_dotenv()
 
@@ -21,6 +30,9 @@ PDF_TEXT_MIN_CHARS = 200          # abaixo disso considera PDF escaneado e usa v
 PDF_TEXT_MAX_CHARS = 24000        # truncamento de segurança para prompts textuais
 PDF_VISION_MAX_PAGES = 5          # quantas páginas renderizar para modelos de visão
 PDF_RENDER_DPI = 150              # DPI da renderização página→imagem
+IMAGE_MAX_DIM = 1280              # lado maior em pixels antes de enviar à IA
+PARALLEL_WORKERS = 5              # threads simultâneas no processamento de lote
+MAX_UPLOAD_MB = 50                # limite de tamanho por requisição
 
 PROMPT_BASE = """
 Analise o conteúdo a seguir e retorne as informações no formato JSON.
@@ -33,7 +45,52 @@ Responda APENAS com o objeto JSON. Não inclua texto explicativo, a palavra 'jso
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'uploads'
-os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+app.config['MAX_CONTENT_LENGTH'] = MAX_UPLOAD_MB * 1024 * 1024
+PENDING_FOLDER = os.path.join(app.config['UPLOAD_FOLDER'], '.pending')
+os.makedirs(PENDING_FOLDER, exist_ok=True)
+
+
+# ---------- Cache por hash ----------
+
+CACHE_FILE = "cache.json"
+_cache_lock = threading.Lock()
+
+
+def _carregar_cache():
+    if not os.path.exists(CACHE_FILE):
+        return {}
+    try:
+        with open(CACHE_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except (json.JSONDecodeError, OSError):
+        return {}
+
+
+def _salvar_cache(cache):
+    tmp = CACHE_FILE + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(cache, f, ensure_ascii=False, indent=2)
+    os.replace(tmp, CACHE_FILE)
+
+
+def _hash_arquivo(caminho):
+    h = hashlib.sha256()
+    with open(caminho, "rb") as f:
+        for chunk in iter(lambda: f.read(65536), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def _cache_get(file_hash):
+    with _cache_lock:
+        return _carregar_cache().get(file_hash)
+
+
+def _cache_set(file_hash, resultado):
+    with _cache_lock:
+        cache = _carregar_cache()
+        cache[file_hash] = resultado
+        _salvar_cache(cache)
 
 
 # ---------- Extração de conteúdo dos arquivos ----------
@@ -46,21 +103,16 @@ def _extract_pdf_text(caminho_arquivo):
     return texto
 
 
-IMAGE_MAX_DIM = 1280  # lado maior em pixels antes de enviar à IA
-
-
 def _downscale(img, max_dim=IMAGE_MAX_DIM):
     largura, altura = img.size
     maior = max(largura, altura)
     if maior <= max_dim:
         return img
     fator = max_dim / maior
-    novo_tamanho = (int(largura * fator), int(altura * fator))
-    return img.resize(novo_tamanho, Image.LANCZOS)
+    return img.resize((int(largura * fator), int(altura * fator)), Image.LANCZOS)
 
 
 def _render_pdf_to_jpeg_b64(caminho_arquivo, max_pages=PDF_VISION_MAX_PAGES, dpi=PDF_RENDER_DPI):
-    """Renderiza as primeiras páginas de um PDF como JPEG base64 (uma string por página)."""
     imagens = []
     zoom = dpi / 72.0
     matrix = fitz.Matrix(zoom, zoom)
@@ -158,7 +210,6 @@ def analisar_conteudo_com_ia(caminho_arquivo):
             if texto and len(texto.strip()) >= PDF_TEXT_MIN_CHARS:
                 messages = _messages_text(texto)
             else:
-                # PDF provavelmente escaneado: usa visão multimodal
                 print(f"[IA] PDF com pouco texto ({len(texto.strip())} chars). Usando visão.")
                 imagens = _render_pdf_to_jpeg_b64(caminho_arquivo)
                 if not imagens:
@@ -197,6 +248,32 @@ def analisar_conteudo_com_ia(caminho_arquivo):
         return None
 
 
+def analisar_com_cache(caminho_arquivo):
+    file_hash = _hash_arquivo(caminho_arquivo)
+    cached = _cache_get(file_hash)
+    if cached is not None:
+        print(f"[CACHE] Hit para {os.path.basename(caminho_arquivo)}")
+        return cached
+    resultado = analisar_conteudo_com_ia(caminho_arquivo)
+    if resultado is not None:
+        _cache_set(file_hash, resultado)
+    return resultado
+
+
+# ---------- Helpers de nome ----------
+
+def _construir_nome_sugerido(resultado):
+    titulo = (resultado.get('titulo_resumido') or 'SEM_TITULO').replace(' ', '_').replace('/', '_')
+    detalhe = (resultado.get('detalhe_principal') or 'SEM_DETALHE').replace(' ', '_').replace('/', '_')
+    return f"{titulo}-{detalhe}"
+
+
+def _sanitizar_nome_final(nome_base, sufixo, extensao):
+    base = unidecode(nome_base).strip()
+    nome_completo = f"{base}-{sufixo}{extensao}"
+    return secure_filename(nome_completo) or f"documento-{sufixo}{extensao}"
+
+
 # ---------- Rotas ----------
 
 @app.route('/')
@@ -211,54 +288,80 @@ def favicon():
 
 @app.route('/upload', methods=['POST'])
 def upload_arquivo():
+    """Salva os arquivos como pendentes e analisa em paralelo. NÃO renomeia ainda."""
     if 'arquivo' not in request.files:
         return jsonify({"erro": "Nenhum arquivo enviado"}), 400
 
     arquivos = request.files.getlist('arquivo')
-    resultados_finais = []
 
+    # Fase 1 (sequencial, rápida): salvar todos em .pending/
+    pendentes = []
     for arquivo in arquivos:
         if arquivo.filename == '':
             continue
-
         filename_original = secure_filename(arquivo.filename)
-        caminho_arquivo_original = os.path.join(app.config['UPLOAD_FOLDER'], filename_original)
-        arquivo.save(caminho_arquivo_original)
-
-        resultado_ia = analisar_conteudo_com_ia(caminho_arquivo_original)
-
-        if resultado_ia is None:
-            resultados_finais.append({"nome_original": filename_original, "erro": "Não foi possível analisar este arquivo."})
-            if os.path.exists(caminho_arquivo_original):
-                os.remove(caminho_arquivo_original)
-            continue
-
-        extensao = os.path.splitext(filename_original)[1]
-        titulo = resultado_ia.get('titulo_resumido', 'SEM_TITULO').replace(' ', '_').replace('/', '_')
-        detalhe = resultado_ia.get('detalhe_principal', 'SEM_DETALHE').replace(' ', '_').replace('/', '_')
-        sufixo_unico = uuid.uuid4().hex[:6]
-
-        novo_nome = f"{titulo}-{detalhe}-{sufixo_unico}{extensao}"
-        novo_nome_seguro = secure_filename(novo_nome)
-        caminho_arquivo_renomeado = os.path.join(app.config['UPLOAD_FOLDER'], novo_nome_seguro)
-
-        try:
-            os.rename(caminho_arquivo_original, caminho_arquivo_renomeado)
-        except OSError as e:
-            print(f"Erro ao renomear arquivo: {e}")
-            resultados_finais.append({"nome_original": filename_original, "erro": "Não foi possível renomear o arquivo no servidor."})
-            if os.path.exists(caminho_arquivo_original):
-                os.remove(caminho_arquivo_original)
-            continue
-
-        resultados_finais.append({
-            "nome_original": filename_original,
-            "novo_nome": novo_nome,
-            "novo_nome_servidor": novo_nome_seguro,
-            "descricao": resultado_ia.get('descricao', 'Nenhuma descrição gerada.')
+        extensao = os.path.splitext(filename_original)[1].lower()
+        pending_id = uuid.uuid4().hex
+        pending_path = os.path.join(PENDING_FOLDER, f"{pending_id}{extensao}")
+        arquivo.save(pending_path)
+        pendentes.append({
+            "id": pending_id,
+            "filename_original": filename_original,
+            "extensao": extensao,
+            "pending_path": pending_path,
         })
 
-    return jsonify(resultados_finais)
+    # Fase 2 (paralela): hash + cache + IA
+    def _processar(item):
+        resultado = analisar_com_cache(item["pending_path"])
+        if resultado is None:
+            try:
+                os.remove(item["pending_path"])
+            except OSError:
+                pass
+            return {"nome_original": item["filename_original"], "erro": "Não foi possível analisar este arquivo."}
+        return {
+            "id": item["id"],
+            "extensao": item["extensao"],
+            "nome_original": item["filename_original"],
+            "novo_nome_sugerido": _construir_nome_sugerido(resultado),
+            "descricao": resultado.get('descricao', 'Nenhuma descrição gerada.'),
+        }
+
+    with ThreadPoolExecutor(max_workers=PARALLEL_WORKERS) as pool:
+        resultados = list(pool.map(_processar, pendentes))
+
+    return jsonify(resultados)
+
+
+@app.route('/confirmar', methods=['POST'])
+def confirmar_renomeacao():
+    """Renomeia o arquivo pendente para o nome final (eventualmente editado pelo usuário)."""
+    data = request.get_json(silent=True) or {}
+    pending_id = data.get('id', '').strip()
+    extensao = (data.get('extensao') or '').lower()
+    novo_nome = (data.get('novo_nome') or '').strip()
+
+    if not pending_id or not novo_nome:
+        return jsonify({"erro": "id e novo_nome são obrigatórios"}), 400
+
+    # Bloqueio simples contra path traversal no id
+    if not pending_id.isalnum():
+        return jsonify({"erro": "id inválido"}), 400
+
+    pending_path = os.path.join(PENDING_FOLDER, f"{pending_id}{extensao}")
+    if not os.path.exists(pending_path):
+        return jsonify({"erro": "Arquivo pendente não encontrado (talvez já confirmado)."}), 404
+
+    nome_final = _sanitizar_nome_final(novo_nome, pending_id[:6], extensao)
+    destino = os.path.join(app.config['UPLOAD_FOLDER'], nome_final)
+
+    try:
+        os.rename(pending_path, destino)
+    except OSError as e:
+        return jsonify({"erro": f"Falha ao renomear: {e}"}), 500
+
+    return jsonify({"novo_nome_servidor": nome_final, "novo_nome": nome_final})
 
 
 @app.route('/download/<path:filename>')

@@ -331,21 +331,23 @@
                             resultadoDiv.innerHTML += errorHtml;
                             continue;
                         }
-                        
+
+                        const idEsc = encodeURIComponent(result.id);
+                        const extEsc = encodeURIComponent(result.extensao);
                         const resultHtml = `
-                            <div class="result-item">
-                                <label>Novo Nome Sugerido:</label>
+                            <div class="result-item" data-id="${idEsc}" data-extensao="${extEsc}">
+                                <p><strong>Arquivo original:</strong> ${result.nome_original}</p>
+                                <label>Novo Nome (você pode editar antes de baixar):</label>
                                 <div class="copy-area">
-                                    <input type="text" value="${result.novo_nome}" readonly>
-                                    <button type="button" onclick="copiarTexto(this)">Copiar</button>
+                                    <input type="text" class="novo-nome-input" value="${result.novo_nome_sugerido}">
+                                    <span class="ext-label" style="font-family:monospace;color:#666;">${result.extensao}</span>
                                 </div>
                                 <label>Descrição:</label>
                                 <div class="copy-area">
                                     <textarea rows="4" readonly>${result.descricao}</textarea>
                                     <button type="button" onclick="copiarTexto(this)">Copiar</button>
                                 </div>
-                                
-                                <a href="/download/${result.novo_nome_servidor}" class="download-btn" download="${result.novo_nome}">Baixar Renomeado</a>
+                                <button type="button" class="download-btn" onclick="confirmarEBaixar(this)">Confirmar e Baixar</button>
                             </div>
                         `;
                         resultadoDiv.innerHTML += resultHtml;
@@ -372,12 +374,54 @@
             const inputElement = buttonElement.previousElementSibling;
             inputElement.select();
             inputElement.setSelectionRange(0, 99999);
-            
+
             try {
                 document.execCommand('copy');
                 alert('Texto copiado!');
             } catch (err) {
                 alert('Não foi possível copiar o texto.');
+            }
+        }
+
+        async function confirmarEBaixar(buttonEl) {
+            const item = buttonEl.closest('.result-item');
+            const id = decodeURIComponent(item.dataset.id);
+            const extensao = decodeURIComponent(item.dataset.extensao);
+            const input = item.querySelector('.novo-nome-input');
+            const novoNome = input.value.trim();
+
+            if (!novoNome) {
+                alert('Informe um nome antes de baixar.');
+                input.focus();
+                return;
+            }
+
+            const textoOriginal = buttonEl.textContent;
+            buttonEl.disabled = true;
+            buttonEl.textContent = 'Processando...';
+
+            try {
+                const response = await fetch('/confirmar', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id, extensao, novo_nome: novoNome }),
+                });
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.erro || 'Erro ao renomear.');
+
+                const link = document.createElement('a');
+                link.href = `/download/${encodeURIComponent(data.novo_nome_servidor)}`;
+                link.download = data.novo_nome;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+
+                buttonEl.textContent = 'Baixado ✓';
+                input.readOnly = true;
+            } catch (err) {
+                alert('Erro: ' + err.message);
+                buttonEl.disabled = false;
+                buttonEl.textContent = textoOriginal;
             }
         }
         function resetarPagina() {
