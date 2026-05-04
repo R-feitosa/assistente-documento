@@ -327,6 +327,17 @@
                         resultadoDiv.innerHTML += '<p>Nenhum arquivo processado com sucesso.</p>';
                     }
 
+                    const sucessos = results.filter(r => !r.erro).length;
+                    if (sucessos > 1) {
+                        resultadoDiv.innerHTML += `
+                            <div style="text-align:center;margin-bottom:1.5rem;">
+                                <button type="button" id="btn-zip-todos" class="download-btn" onclick="baixarTodosZip()">
+                                    📦 Confirmar Todos e Baixar (.zip)
+                                </button>
+                            </div>
+                        `;
+                    }
+
                     for (const result of results) {
                         if(result.erro) {
                             const errorHtml = `
@@ -386,6 +397,62 @@
                 alert('Texto copiado!');
             } catch (err) {
                 alert('Não foi possível copiar o texto.');
+            }
+        }
+
+        async function baixarTodosZip() {
+            const btn = document.getElementById('btn-zip-todos');
+            const itens = [];
+            document.querySelectorAll('.result-item[data-id]').forEach(div => {
+                const input = div.querySelector('.novo-nome-input');
+                if (!input || input.readOnly) return; // já confirmado individualmente
+                const novoNome = (input.value || '').trim();
+                if (!novoNome) return;
+                itens.push({
+                    id: decodeURIComponent(div.dataset.id),
+                    extensao: decodeURIComponent(div.dataset.extensao),
+                    novo_nome: novoNome,
+                });
+            });
+
+            if (itens.length === 0) {
+                alert('Nenhum arquivo pendente para baixar.');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = 'Compactando...';
+
+            try {
+                const response = await fetch('/baixar-zip', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ itens }),
+                });
+                if (!response.ok) {
+                    const data = await response.json().catch(() => ({}));
+                    throw new Error(data.erro || 'Erro ao gerar ZIP');
+                }
+                const blob = await response.blob();
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = 'documentos-renomeados.zip';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+
+                document.querySelectorAll('.result-item .novo-nome-input').forEach(i => i.readOnly = true);
+                document.querySelectorAll('.result-item .download-btn').forEach(b => {
+                    b.disabled = true;
+                    b.textContent = 'Incluído no ZIP ✓';
+                });
+                btn.textContent = 'ZIP Baixado ✓';
+            } catch (err) {
+                alert('Erro: ' + err.message);
+                btn.disabled = false;
+                btn.textContent = '📦 Confirmar Todos e Baixar (.zip)';
             }
         }
 
