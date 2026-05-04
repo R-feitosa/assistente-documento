@@ -15,10 +15,28 @@ jobs:
           fetch-depth: 0
           lfs: true
 
+      - name: Validar HF_TOKEN
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          if [ -z "$HF_TOKEN" ]; then
+            echo "::error::Secret HF_TOKEN está vazio ou não foi configurado."
+            echo "Configure em: GitHub → Settings → Secrets and variables → Actions → New repository secret"
+            exit 1
+          fi
+          echo "HF_TOKEN tem ${#HF_TOKEN} caracteres."
+
       - name: Push para o Hugging Face Space
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
+          # Configura git para esta operação
+          git config --global user.email "github-actions@users.noreply.github.com"
+          git config --global user.name "GitHub Actions"
+
+          # Usa o token como senha HTTP-Basic
+          # O usuário antes dos ':' pode ser qualquer string com tokens HF
           git push --force \
-            "https://Roneely:${HF_TOKEN}@huggingface.co/spaces/Roneely/assistente-de-documentos" \
+            "https://user:${HF_TOKEN}@huggingface.co/spaces/Roneely/assistente-de-documentos" \
             main:main
+
