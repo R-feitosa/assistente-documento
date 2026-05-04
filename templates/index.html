@@ -161,20 +161,26 @@
             align-items: center;
             border-radius: 12px;
             text-align: center;
-            padding-top: 15%;
         }
-        #loading img {
-            width: 900px; /* CORREÇÃO: Tamanho do GIF ajustado */
-            height: auto;
-            margin-bottom: 2.5rem;
+        .spinner {
+            width: 80px;
+            height: 80px;
+            border: 8px solid rgba(112, 0, 0, 0.15);
+            border-top-color: var(--primary-color);
+            border-right-color: var(--secondary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 2rem;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
         }
         #loading p {
             margin: 0 auto;
-            font-size: 1.8rem; /* CORREÇÃO: Tamanho da fonte ajustado */
+            font-size: 1.4rem;
             color: var(--secondary-color);
             font-weight: 600;
-            max-width: 50%; /* CORREÇÃO: Largura máxima ajustada */
-           
+            max-width: 70%;
         }
 
         #resultado { 
@@ -277,7 +283,7 @@
         </form>
 
         <div id="loading" style="display: none">
-            <img src="../static/images/loading.gif" alt="Processando...">
+            <div class="spinner" aria-label="Processando"></div>
             <p>Analisando os documentos com inteligência artificial. Isso pode levar alguns segundos por arquivo.</p>
         </div>
 
