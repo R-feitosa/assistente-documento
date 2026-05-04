@@ -14,14 +14,14 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # --- Configuração de backends ---
-# BACKEND_PRIMARY pode ser "ollama" (local) ou "openrouter" (nuvem).
+# BACKEND_PRIMARY pode ser "local" (Ollama, LM Studio etc.) ou "openrouter" (nuvem).
 # BACKEND_FALLBACK é acionado quando o primário falha ou devolve JSON inválido.
 # Deixe BACKEND_FALLBACK vazio para desabilitar o fallback.
-BACKEND_PRIMARY = os.getenv("BACKEND_PRIMARY", "ollama").lower()
+BACKEND_PRIMARY = os.getenv("BACKEND_PRIMARY", "local").lower()
 BACKEND_FALLBACK = os.getenv("BACKEND_FALLBACK", "openrouter").lower()
 
-OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434/v1")
-OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "gemma3:12b")
+LOCAL_LLM_URL = os.getenv("LOCAL_LLM_URL", "http://localhost:11434/v1")
+LOCAL_LLM_MODEL = os.getenv("LOCAL_LLM_MODEL", "gemma3:12b")
 
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "google/gemini-2.5-flash")
@@ -128,8 +128,8 @@ def _call_openai_compatible(base_url, api_key, model, messages, timeout=180):
 
 
 def _call_backend(backend, messages):
-    if backend == "ollama":
-        return _call_openai_compatible(OLLAMA_URL, None, OLLAMA_MODEL, messages)
+    if backend == "local":
+        return _call_openai_compatible(LOCAL_LLM_URL, None, LOCAL_LLM_MODEL, messages)
     if backend == "openrouter":
         if not OPENROUTER_API_KEY:
             raise RuntimeError("OPENROUTER_API_KEY não configurada.")
