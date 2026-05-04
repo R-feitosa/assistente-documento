@@ -56,6 +56,19 @@ def _extract_pdf_text(caminho_arquivo):
     return texto
 
 
+IMAGE_MAX_DIM = 1280  # lado maior em pixels antes de enviar à IA
+
+
+def _downscale(img, max_dim=IMAGE_MAX_DIM):
+    largura, altura = img.size
+    maior = max(largura, altura)
+    if maior <= max_dim:
+        return img
+    fator = max_dim / maior
+    novo_tamanho = (int(largura * fator), int(altura * fator))
+    return img.resize(novo_tamanho, Image.LANCZOS)
+
+
 def _render_pdf_to_jpeg_b64(caminho_arquivo, max_pages=PDF_VISION_MAX_PAGES, dpi=PDF_RENDER_DPI):
     """Renderiza as primeiras páginas de um PDF como JPEG base64 (uma string por página)."""
     imagens = []
@@ -66,6 +79,7 @@ def _render_pdf_to_jpeg_b64(caminho_arquivo, max_pages=PDF_VISION_MAX_PAGES, dpi
         for i in range(total):
             pix = doc[i].get_pixmap(matrix=matrix, alpha=False)
             img = Image.frombytes("RGB", (pix.width, pix.height), pix.samples)
+            img = _downscale(img)
             buf = BytesIO()
             img.save(buf, format="JPEG", quality=85)
             imagens.append(base64.b64encode(buf.getvalue()).decode("utf-8"))
@@ -81,8 +95,9 @@ def _image_to_jpeg_b64(caminho_arquivo):
     img = Image.open(caminho_arquivo)
     if img.mode != "RGB":
         img = img.convert("RGB")
+    img = _downscale(img)
     buf = BytesIO()
-    img.save(buf, format="JPEG", quality=90)
+    img.save(buf, format="JPEG", quality=85)
     return base64.b64encode(buf.getvalue()).decode("utf-8")
 
 
