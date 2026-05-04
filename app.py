@@ -5,41 +5,81 @@ import json
 import uuid
 import base64
 import hashlib
+import logging
 import threading
+import time
+import zipfile
 from concurrent.futures import ThreadPoolExecutor
 from io import BytesIO
 import requests
 from PIL import Image
-from flask import Flask, request, jsonify, render_template, send_from_directory
+from flask import Flask, request, jsonify, render_template, send_from_directory, send_file
 from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
 
 try:
     from unidecode import unidecode
-except ImportError:  # fallback se a dependência ainda não estiver instalada
+except ImportError:
     def unidecode(s):
         return s
 
+try:
+    from pydantic import BaseModel, Field, ValidationError
+
+    class ResultadoIA(BaseModel):
+        tipo_documento: str = Field(default="DESCONHECIDO")
+        titulo_resumido: str = Field(default="SEM_TITULO")
+        detalhe_principal: str = Field(default="SEM_DETALHE")
+        descricao: str = Field(default="")
+
+    PYDANTIC_OK = True
+except ImportError:
+    PYDANTIC_OK = False
+
 load_dotenv()
 
+# --- Logging ---
+logging.basicConfig(
+    level=os.getenv("LOG_LEVEL", "INFO").upper(),
+    format='%(asctime)s [%(levelname)s] %(message)s',
+    datefmt='%H:%M:%S',
+)
+log = logging.getLogger("assistente")
+
+# --- Config ---
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "google/gemini-2.5-flash")
+DEBUG = os.getenv("DEBUG", "false").lower() in ("1", "true", "yes")
 
 # Limites
-PDF_TEXT_MIN_CHARS = 200          # abaixo disso considera PDF escaneado e usa visão
-PDF_TEXT_MAX_CHARS = 24000        # truncamento de segurança para prompts textuais
-PDF_VISION_MAX_PAGES = 5          # quantas páginas renderizar para modelos de visão
-PDF_RENDER_DPI = 150              # DPI da renderização página→imagem
-IMAGE_MAX_DIM = 1280              # lado maior em pixels antes de enviar à IA
-PARALLEL_WORKERS = 5              # threads simultâneas no processamento de lote
-MAX_UPLOAD_MB = 50                # limite de tamanho por requisição
+PDF_TEXT_MIN_CHARS = 200
+PDF_TEXT_MAX_CHARS = 24000
+PDF_VISION_MAX_PAGES = 5
+PDF_RENDER_DPI = 150
+IMAGE_MAX_DIM = 1280
+PARALLEL_WORKERS = 5
+MAX_UPLOAD_MB = 50
+RETRY_MAX_TENTATIVAS = 3
+RETRY_BACKOFF_BASE = 2  # segundos: 2, 4, 8
 
 PROMPT_BASE = """
-Analise o conteúdo a seguir e retorne as informações no formato JSON.
-1.  **tipo_documento**: Identifique o tipo do documento (ex: 'CONTRATO', 'NOTA_FISCAL', 'FOTO_PAISAGEM', 'GRAFICO', 'IDENTIDADE').
-2.  **titulo_resumido**: Crie um título curto e descritivo para o documento (ex: 'Contrato de Aluguel', 'Conta de Energia'). Máximo de 5 palavras.
-3.  **detalhe_principal**: Extraia o nome da pessoa principal ou da empresa principal mencionada no documento. Identificar os nomes das partes, reclamante/reclamado, exequente/executado, etc. Se não houver, extraia o endereço principal. Use este detalhe para o nome do arquivo.
-4.  **descricao**: Crie uma breve descrição do conteúdo. Se houver texto, resuma as informações mais importantes. Se for uma imagem sem texto, descreva a cena. Máximo de 50 palavras.
+Analise o conteúdo a seguir e retorne as informações no formato JSON, com EXATAMENTE estes 4 campos:
+
+1.  **tipo_documento**: Tipo do documento em MAIÚSCULAS_COM_SUBLINHADO (ex: 'CONTRATO', 'NOTA_FISCAL', 'PETICAO', 'IDENTIDADE', 'COMPROVANTE_RESIDENCIA', 'FOTO').
+2.  **titulo_resumido**: Título curto e descritivo, máximo 5 palavras (ex: 'Contrato de Locação', 'Petição Inicial Trabalhista').
+3.  **detalhe_principal**: Nome da pessoa/empresa principal. Em peças jurídicas: nomes das partes (reclamante/reclamado, exequente/executado, autor/réu) separados por "_e_". Se não houver nome, use o endereço principal.
+4.  **descricao**: Resumo do conteúdo em até 50 palavras. Se for imagem sem texto, descreva a cena.
+
+EXEMPLOS:
+
+Conteúdo: "CONTRATO DE LOCAÇÃO RESIDENCIAL celebrado entre João da Silva (LOCADOR) e Maria Souza (LOCATÁRIA), referente ao imóvel situado na Rua das Flores, 100..."
+Resposta:
+{"tipo_documento": "CONTRATO", "titulo_resumido": "Contrato de Locacao Residencial", "detalhe_principal": "Joao_da_Silva_e_Maria_Souza", "descricao": "Contrato de locação residencial entre João da Silva (locador) e Maria Souza (locatária) sobre imóvel na Rua das Flores, 100."}
+
+Conteúdo: "PETIÇÃO INICIAL - JUSTIÇA DO TRABALHO. Reclamante: Carlos Pereira. Reclamado: ACME Ltda. Pedido: verbas rescisórias..."
+Resposta:
+{"tipo_documento": "PETICAO", "titulo_resumido": "Peticao Inicial Trabalhista", "detalhe_principal": "Carlos_Pereira_e_ACME_Ltda", "descricao": "Petição inicial trabalhista. Reclamante: Carlos Pereira. Reclamado: ACME Ltda. Pedido de verbas rescisórias."}
+
 Responda APENAS com o objeto JSON. Não inclua texto explicativo, a palavra 'json' nem ```. Sua resposta deve começar com { e terminar com }.
 """
 
@@ -93,11 +133,11 @@ def _cache_set(file_hash, resultado):
         _salvar_cache(cache)
 
 
-# ---------- Extração de conteúdo dos arquivos ----------
+# ---------- Extração de conteúdo ----------
 
-def _extract_pdf_text(caminho_arquivo):
+def _extract_pdf_text(caminho):
     texto = ""
-    with fitz.open(caminho_arquivo) as doc:
+    with fitz.open(caminho) as doc:
         for pagina in doc:
             texto += pagina.get_text()
     return texto
@@ -112,11 +152,11 @@ def _downscale(img, max_dim=IMAGE_MAX_DIM):
     return img.resize((int(largura * fator), int(altura * fator)), Image.LANCZOS)
 
 
-def _render_pdf_to_jpeg_b64(caminho_arquivo, max_pages=PDF_VISION_MAX_PAGES, dpi=PDF_RENDER_DPI):
+def _render_pdf_to_jpeg_b64(caminho, max_pages=PDF_VISION_MAX_PAGES, dpi=PDF_RENDER_DPI):
     imagens = []
     zoom = dpi / 72.0
     matrix = fitz.Matrix(zoom, zoom)
-    with fitz.open(caminho_arquivo) as doc:
+    with fitz.open(caminho) as doc:
         total = min(len(doc), max_pages)
         for i in range(total):
             pix = doc[i].get_pixmap(matrix=matrix, alpha=False)
@@ -128,13 +168,13 @@ def _render_pdf_to_jpeg_b64(caminho_arquivo, max_pages=PDF_VISION_MAX_PAGES, dpi
     return imagens
 
 
-def _extract_docx_text(caminho_arquivo):
-    documento = docx.Document(caminho_arquivo)
+def _extract_docx_text(caminho):
+    documento = docx.Document(caminho)
     return "\n".join(p.text for p in documento.paragraphs)
 
 
-def _image_to_jpeg_b64(caminho_arquivo):
-    img = Image.open(caminho_arquivo)
+def _image_to_jpeg_b64(caminho):
+    img = Image.open(caminho)
     if img.mode != "RGB":
         img = img.convert("RGB")
     img = _downscale(img)
@@ -143,7 +183,7 @@ def _image_to_jpeg_b64(caminho_arquivo):
     return base64.b64encode(buf.getvalue()).decode("utf-8")
 
 
-# ---------- Construção das mensagens ----------
+# ---------- Mensagens ----------
 
 def _messages_text(texto):
     conteudo = PROMPT_BASE + "\n\n--- CONTEÚDO PARA ANÁLISE ---\n" + texto[:PDF_TEXT_MAX_CHARS]
@@ -160,7 +200,15 @@ def _messages_vision(imagens_b64):
     return [{"role": "user", "content": content}]
 
 
-# ---------- Chamada ao OpenRouter ----------
+# ---------- OpenRouter com retry ----------
+
+def _eh_erro_transitorio(e):
+    if isinstance(e, (requests.ConnectionError, requests.Timeout)):
+        return True
+    if isinstance(e, requests.HTTPError) and e.response is not None:
+        return e.response.status_code in (429, 500, 502, 503, 504)
+    return False
+
 
 def _chamar_openrouter(messages, timeout=180):
     if not OPENROUTER_API_KEY:
@@ -183,7 +231,31 @@ def _chamar_openrouter(messages, timeout=180):
         headers=headers, json=payload, timeout=timeout,
     )
     response.raise_for_status()
-    return response.json()["choices"][0]["message"]["content"]
+    data = response.json()
+    usage = data.get("usage", {})
+    log.info(
+        "Tokens: in=%s out=%s total=%s | modelo=%s",
+        usage.get("prompt_tokens", "?"),
+        usage.get("completion_tokens", "?"),
+        usage.get("total_tokens", "?"),
+        OPENROUTER_MODEL,
+    )
+    return data["choices"][0]["message"]["content"]
+
+
+def _chamar_openrouter_com_retry(messages):
+    for tentativa in range(1, RETRY_MAX_TENTATIVAS + 1):
+        try:
+            return _chamar_openrouter(messages)
+        except Exception as e:
+            if tentativa == RETRY_MAX_TENTATIVAS or not _eh_erro_transitorio(e):
+                raise
+            espera = RETRY_BACKOFF_BASE ** tentativa
+            log.warning(
+                "Erro transitório (tentativa %d/%d): %s. Aguardando %ds.",
+                tentativa, RETRY_MAX_TENTATIVAS, e, espera,
+            )
+            time.sleep(espera)
 
 
 def _parse_json_resposta(content):
@@ -197,21 +269,28 @@ def _parse_json_resposta(content):
     fim = limpo.rfind("}")
     if inicio == -1 or fim == -1:
         raise ValueError("Resposta sem objeto JSON identificável.")
-    return json.loads(limpo[inicio:fim + 1])
+    bruto = json.loads(limpo[inicio:fim + 1])
+    if PYDANTIC_OK:
+        try:
+            return ResultadoIA(**bruto).model_dump()
+        except ValidationError as e:
+            log.warning("Resposta da IA falhou na validação Pydantic: %s. Retornando bruto.", e)
+            return bruto
+    return bruto
 
 
 # ---------- Orquestrador ----------
 
-def analisar_conteudo_com_ia(caminho_arquivo):
-    extensao = os.path.splitext(caminho_arquivo)[1].lower()
+def analisar_conteudo_com_ia(caminho):
+    extensao = os.path.splitext(caminho)[1].lower()
     try:
         if extensao == ".pdf":
-            texto = _extract_pdf_text(caminho_arquivo)
+            texto = _extract_pdf_text(caminho)
             if texto and len(texto.strip()) >= PDF_TEXT_MIN_CHARS:
                 messages = _messages_text(texto)
             else:
-                print(f"[IA] PDF com pouco texto ({len(texto.strip())} chars). Usando visão.")
-                imagens = _render_pdf_to_jpeg_b64(caminho_arquivo)
+                log.info("PDF com pouco texto (%d chars). Usando visão.", len(texto.strip()))
+                imagens = _render_pdf_to_jpeg_b64(caminho)
                 if not imagens:
                     return {
                         "tipo_documento": "N/A",
@@ -222,7 +301,7 @@ def analisar_conteudo_com_ia(caminho_arquivo):
                 messages = _messages_vision(imagens)
 
         elif extensao == ".docx":
-            texto = _extract_docx_text(caminho_arquivo)
+            texto = _extract_docx_text(caminho)
             if not texto or len(texto.strip()) < 20:
                 return {
                     "tipo_documento": "N/A",
@@ -233,28 +312,26 @@ def analisar_conteudo_com_ia(caminho_arquivo):
             messages = _messages_text(texto)
 
         elif extensao in (".jpg", ".jpeg", ".png"):
-            messages = _messages_vision([_image_to_jpeg_b64(caminho_arquivo)])
+            messages = _messages_vision([_image_to_jpeg_b64(caminho)])
 
         else:
             return None
 
-        return _parse_json_resposta(_chamar_openrouter(messages))
+        return _parse_json_resposta(_chamar_openrouter_com_retry(messages))
 
     except Exception as e:
-        print(f"--- ERRO NA ANÁLISE ---")
-        print(f"Arquivo: {os.path.basename(caminho_arquivo)}")
-        print(f"Tipo do Erro: {type(e).__name__}")
-        print(f"Mensagem do Erro: {e}")
+        log.error("Erro analisando %s: %s: %s", os.path.basename(caminho), type(e).__name__, e)
         return None
 
 
-def analisar_com_cache(caminho_arquivo):
-    file_hash = _hash_arquivo(caminho_arquivo)
+def analisar_com_cache(caminho):
+    file_hash = _hash_arquivo(caminho)
     cached = _cache_get(file_hash)
     if cached is not None:
-        print(f"[CACHE] Hit para {os.path.basename(caminho_arquivo)}")
+        log.info("Cache HIT para %s", os.path.basename(caminho))
         return cached
-    resultado = analisar_conteudo_com_ia(caminho_arquivo)
+    log.info("Cache MISS para %s — chamando IA", os.path.basename(caminho))
+    resultado = analisar_conteudo_com_ia(caminho)
     if resultado is not None:
         _cache_set(file_hash, resultado)
     return resultado
@@ -270,8 +347,31 @@ def _construir_nome_sugerido(resultado):
 
 def _sanitizar_nome_final(nome_base, sufixo, extensao):
     base = unidecode(nome_base).strip()
-    nome_completo = f"{base}-{sufixo}{extensao}"
-    return secure_filename(nome_completo) or f"documento-{sufixo}{extensao}"
+    return secure_filename(f"{base}-{sufixo}{extensao}") or f"documento-{sufixo}{extensao}"
+
+
+def _renomear_pendente(item):
+    """Move um arquivo de .pending/ para uploads/ com o nome final.
+    Retorna (nome_final, caminho_destino) ou None se não foi possível."""
+    pending_id = item.get('id', '').strip()
+    extensao = (item.get('extensao') or '').lower()
+    novo_nome = (item.get('novo_nome') or '').strip()
+
+    if not pending_id or not novo_nome or not pending_id.isalnum():
+        return None
+
+    pending_path = os.path.join(PENDING_FOLDER, f"{pending_id}{extensao}")
+    if not os.path.exists(pending_path):
+        return None
+
+    nome_final = _sanitizar_nome_final(novo_nome, pending_id[:6], extensao)
+    destino = os.path.join(app.config['UPLOAD_FOLDER'], nome_final)
+    try:
+        os.rename(pending_path, destino)
+    except OSError as e:
+        log.error("Falha ao renomear %s → %s: %s", pending_path, destino, e)
+        return None
+    return nome_final, destino
 
 
 # ---------- Rotas ----------
@@ -286,15 +386,22 @@ def favicon():
     return '', 204
 
 
+@app.route('/health')
+def health():
+    return jsonify({
+        "status": "ok",
+        "openrouter_configured": bool(OPENROUTER_API_KEY),
+        "model": OPENROUTER_MODEL,
+    })
+
+
 @app.route('/upload', methods=['POST'])
 def upload_arquivo():
-    """Salva os arquivos como pendentes e analisa em paralelo. NÃO renomeia ainda."""
     if 'arquivo' not in request.files:
         return jsonify({"erro": "Nenhum arquivo enviado"}), 400
 
     arquivos = request.files.getlist('arquivo')
 
-    # Fase 1 (sequencial, rápida): salvar todos em .pending/
     pendentes = []
     for arquivo in arquivos:
         if arquivo.filename == '':
@@ -311,7 +418,8 @@ def upload_arquivo():
             "pending_path": pending_path,
         })
 
-    # Fase 2 (paralela): hash + cache + IA
+    log.info("Recebidos %d arquivos. Iniciando análise paralela.", len(pendentes))
+
     def _processar(item):
         resultado = analisar_com_cache(item["pending_path"])
         if resultado is None:
@@ -336,46 +444,55 @@ def upload_arquivo():
 
 @app.route('/confirmar', methods=['POST'])
 def confirmar_renomeacao():
-    """Renomeia o arquivo pendente para o nome final (eventualmente editado pelo usuário)."""
     data = request.get_json(silent=True) or {}
-    pending_id = data.get('id', '').strip()
-    extensao = (data.get('extensao') or '').lower()
-    novo_nome = (data.get('novo_nome') or '').strip()
-
-    if not pending_id or not novo_nome:
-        return jsonify({"erro": "id e novo_nome são obrigatórios"}), 400
-
-    # Bloqueio simples contra path traversal no id
-    if not pending_id.isalnum():
-        return jsonify({"erro": "id inválido"}), 400
-
-    pending_path = os.path.join(PENDING_FOLDER, f"{pending_id}{extensao}")
-    if not os.path.exists(pending_path):
-        return jsonify({"erro": "Arquivo pendente não encontrado (talvez já confirmado)."}), 404
-
-    nome_final = _sanitizar_nome_final(novo_nome, pending_id[:6], extensao)
-    destino = os.path.join(app.config['UPLOAD_FOLDER'], nome_final)
-
-    try:
-        os.rename(pending_path, destino)
-    except OSError as e:
-        return jsonify({"erro": f"Falha ao renomear: {e}"}), 500
-
+    resultado = _renomear_pendente(data)
+    if resultado is None:
+        return jsonify({"erro": "Não foi possível confirmar (id/nome inválido ou pendente expirado)."}), 400
+    nome_final, _ = resultado
     return jsonify({"novo_nome_servidor": nome_final, "novo_nome": nome_final})
+
+
+@app.route('/baixar-zip', methods=['POST'])
+def baixar_zip():
+    """Renomeia todos os pendentes informados e devolve um ZIP em memória."""
+    data = request.get_json(silent=True) or {}
+    itens = data.get('itens', [])
+    if not itens:
+        return jsonify({"erro": "Nenhum item enviado"}), 400
+
+    arquivos_finais = []
+    for item in itens:
+        resultado = _renomear_pendente(item)
+        if resultado:
+            arquivos_finais.append(resultado)
+
+    if not arquivos_finais:
+        return jsonify({"erro": "Nenhum arquivo válido para zipar (pode já ter sido baixado)."}), 400
+
+    buffer = BytesIO()
+    with zipfile.ZipFile(buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
+        for nome_final, caminho in arquivos_finais:
+            zf.write(caminho, arcname=nome_final)
+    buffer.seek(0)
+
+    log.info("ZIP com %d arquivos gerado.", len(arquivos_finais))
+    return send_file(
+        buffer,
+        mimetype='application/zip',
+        as_attachment=True,
+        download_name='documentos-renomeados.zip',
+    )
 
 
 @app.route('/download/<path:filename>')
 def download_file(filename):
     try:
-        return send_from_directory(
-            app.config['UPLOAD_FOLDER'],
-            filename,
-            as_attachment=True
-        )
+        return send_from_directory(app.config['UPLOAD_FOLDER'], filename, as_attachment=True)
     except FileNotFoundError:
         return "Arquivo não encontrado.", 404
 
 
 if __name__ == '__main__':
     porta = int(os.getenv("PORT", "5001"))
-    app.run(debug=True, port=porta)
+    log.info("Subindo Flask em :%d (debug=%s, modelo=%s)", porta, DEBUG, OPENROUTER_MODEL)
+    app.run(debug=DEBUG, port=porta, host="0.0.0.0")
