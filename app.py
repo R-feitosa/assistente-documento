@@ -274,4 +274,5 @@ def download_file(filename):
 
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    porta = int(os.getenv("PORT", "5001"))
+    app.run(debug=True, port=porta)
