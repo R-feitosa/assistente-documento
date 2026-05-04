@@ -228,6 +228,11 @@ def index():
     return render_template('index.html')
 
 
+@app.route('/favicon.ico')
+def favicon():
+    return '', 204
+
+
 @app.route('/upload', methods=['POST'])
 def upload_arquivo():
     if 'arquivo' not in request.files:
