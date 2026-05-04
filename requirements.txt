@@ -6,3 +6,4 @@ Pillow
 python-dotenv
 werkzeug
 gunicorn
+Unidecode
