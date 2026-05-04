@@ -13,16 +13,6 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# --- Configuração de backends ---
-# BACKEND_PRIMARY pode ser "local" (Ollama, LM Studio etc.) ou "openrouter" (nuvem).
-# BACKEND_FALLBACK é acionado quando o primário falha ou devolve JSON inválido.
-# Deixe BACKEND_FALLBACK vazio para desabilitar o fallback.
-BACKEND_PRIMARY = os.getenv("BACKEND_PRIMARY", "local").lower()
-BACKEND_FALLBACK = os.getenv("BACKEND_FALLBACK", "openrouter").lower()
-
-LOCAL_LLM_URL = os.getenv("LOCAL_LLM_URL", "http://localhost:11434/v1")
-LOCAL_LLM_MODEL = os.getenv("LOCAL_LLM_MODEL", "gemma3:12b")
-
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "google/gemini-2.5-flash")
 
@@ -118,40 +108,30 @@ def _messages_vision(imagens_b64):
     return [{"role": "user", "content": content}]
 
 
-# ---------- Chamadas aos backends ----------
+# ---------- Chamada ao OpenRouter ----------
 
-def _call_openai_compatible(base_url, api_key, model, messages, timeout=180):
-    """Chamada genérica para qualquer endpoint compatível com /chat/completions."""
-    headers = {"Content-Type": "application/json"}
-    if api_key:
-        headers["Authorization"] = f"Bearer {api_key}"
-    if "openrouter.ai" in base_url:
-        headers["HTTP-Referer"] = "http://localhost"
-        headers["X-Title"] = "Assistente Feitosa"
+def _chamar_openrouter(messages, timeout=180):
+    if not OPENROUTER_API_KEY:
+        raise RuntimeError("OPENROUTER_API_KEY não configurada.")
 
+    headers = {
+        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+        "Content-Type": "application/json",
+        "HTTP-Referer": "http://localhost",
+        "X-Title": "Assistente Feitosa",
+    }
     payload = {
-        "model": model,
+        "model": OPENROUTER_MODEL,
         "messages": messages,
         "max_tokens": 512,
         "response_format": {"type": "json_object"},
     }
-    url = base_url.rstrip("/") + "/chat/completions"
-    response = requests.post(url, headers=headers, json=payload, timeout=timeout)
+    response = requests.post(
+        "https://openrouter.ai/api/v1/chat/completions",
+        headers=headers, json=payload, timeout=timeout,
+    )
     response.raise_for_status()
-    data = response.json()
-    return data["choices"][0]["message"]["content"]
-
-
-def _call_backend(backend, messages):
-    if backend == "local":
-        return _call_openai_compatible(LOCAL_LLM_URL, None, LOCAL_LLM_MODEL, messages)
-    if backend == "openrouter":
-        if not OPENROUTER_API_KEY:
-            raise RuntimeError("OPENROUTER_API_KEY não configurada.")
-        return _call_openai_compatible(
-            "https://openrouter.ai/api/v1", OPENROUTER_API_KEY, OPENROUTER_MODEL, messages
-        )
-    raise ValueError(f"Backend desconhecido: {backend}")
+    return response.json()["choices"][0]["message"]["content"]
 
 
 def _parse_json_resposta(content):
@@ -166,25 +146,6 @@ def _parse_json_resposta(content):
     if inicio == -1 or fim == -1:
         raise ValueError("Resposta sem objeto JSON identificável.")
     return json.loads(limpo[inicio:fim + 1])
-
-
-def _executar_com_fallback(messages):
-    """Tenta o backend primário; em caso de falha, usa o fallback (se configurado)."""
-    tentativas = [BACKEND_PRIMARY]
-    if BACKEND_FALLBACK and BACKEND_FALLBACK != BACKEND_PRIMARY:
-        tentativas.append(BACKEND_FALLBACK)
-
-    ultimo_erro = None
-    for backend in tentativas:
-        try:
-            print(f"[IA] Tentando backend: {backend}")
-            content = _call_backend(backend, messages)
-            return _parse_json_resposta(content)
-        except Exception as e:
-            ultimo_erro = e
-            print(f"[IA] Backend '{backend}' falhou: {type(e).__name__}: {e}")
-            continue
-    raise RuntimeError(f"Todos os backends falharam. Último erro: {ultimo_erro}")
 
 
 # ---------- Orquestrador ----------
@@ -226,7 +187,7 @@ def analisar_conteudo_com_ia(caminho_arquivo):
         else:
             return None
 
-        return _executar_com_fallback(messages)
+        return _parse_json_resposta(_chamar_openrouter(messages))
 
     except Exception as e:
         print(f"--- ERRO NA ANÁLISE ---")
