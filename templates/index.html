@@ -328,11 +328,14 @@
                     }
 
                     const sucessos = results.filter(r => !r.erro).length;
-                    if (sucessos > 1) {
+                    if (sucessos >= 1) {
+                        const rotulo = sucessos > 1
+                            ? `📦 Confirmar Todos e Baixar (.zip) — ${sucessos} arquivos`
+                            : '📦 Confirmar e Baixar (.zip)';
                         resultadoDiv.innerHTML += `
                             <div style="text-align:center;margin-bottom:1.5rem;">
                                 <button type="button" id="btn-zip-todos" class="download-btn" onclick="baixarTodosZip()">
-                                    📦 Confirmar Todos e Baixar (.zip)
+                                    ${rotulo}
                                 </button>
                             </div>
                         `;
