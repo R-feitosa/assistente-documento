@@ -1,0 +1,1067 @@
+/**
+ * CONNECT ACADEMY — Landing Page comercial
+ * Escola de negócios e inteligência corporativa do ecossistema Connect Valley.
+ *
+ * Stack: React 18 + Tailwind CSS + lucide-react + framer-motion
+ *
+ * Paleta oficial (Manual de Marca RF Group):
+ *   Dark Navy  #14193C   |  Amarelo Ouro #F5CD55
+ *   Cinza      #727272   |  Branco       #FFFFFF
+ * (#0D1129 aparece apenas como profundidade de degradê do navy principal)
+ *
+ * Arquivo único e autocontido: basta importar <ConnectAcademyLanding /> em qualquer app
+ * com Tailwind configurado.
+ */
+
+import { useEffect, useState } from 'react'
+import { motion } from 'framer-motion'
+import {
+  ArrowRight,
+  Briefcase,
+  Calendar,
+  CheckCircle2,
+  ChevronDown,
+  Cpu,
+  Instagram,
+  Lightbulb,
+  MapPin,
+  Menu,
+  MessageCircle,
+  Network,
+  Scale,
+  Sparkles,
+  Stethoscope,
+  Target,
+  TrendingUp,
+  Users,
+  X,
+} from 'lucide-react'
+
+/* -------------------------------------------------------------------------- */
+/*  Dados da página — centralizados para facilitar a manutenção comercial      */
+/* -------------------------------------------------------------------------- */
+
+const WHATSAPP_NUMBER = '558893832512'
+const WHATSAPP_DISPLAY = '+55 88 9383-2512'
+const INSTAGRAM_HANDLE = 'connectacademyy'
+const INSTAGRAM_URL = 'https://instagram.com/connectacademyy'
+const VAGAS_POR_TURMA = 20
+
+/**
+ * Data do PRÉ-EVENTO usada pelo contador regressivo do Hero.
+ * O folder anuncia "PRÉ-EVENTO 18 FEV | IMERSÃO 19 E 20 FEV" — ajuste o ano
+ * a cada nova turma. Se a data já tiver passado, o contador some e o card
+ * exibe apenas o alerta de escassez de vagas.
+ */
+const EVENT_DATE = '2027-02-18T09:00:00-03:00'
+
+const waLink = (mensagem) =>
+  `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(mensagem)}`
+
+const WA_GERAL = waLink(
+  'Olá! Vim pelo site do Connect Academy e quero conhecer as próximas turmas.',
+)
+
+const NAV_LINKS = [
+  { label: 'Sobre', href: '#sobre' },
+  { label: 'Imersões', href: '#imersoes' },
+  { label: 'Diferenciais', href: '#diferenciais' },
+  { label: 'Contato', href: '#contato' },
+]
+
+const TRACKS = [
+  {
+    id: 'connect-med',
+    nome: 'Connect Med',
+    icon: Stethoscope,
+    destaque: true,
+    slogan: 'Medicina com visão de negócio.',
+    chamada: 'Gestão e estratégia para uma carreira médica mais sustentável.',
+    descricao:
+      'Uma imersão para médicos que desejam transformar excelência clínica em uma carreira ou negócio bem gerido. O programa integra Gestão Médica 360°, Inteligência Comercial e Estratégia Tributária para organizar a operação, valorizar as horas trabalhadas e ampliar a rentabilidade com ética e segurança.',
+    topicos: [
+      'Gestão Médica 360°',
+      'Inteligência Comercial',
+      'Tributário para médicos',
+      'Precificação das horas trabalhadas',
+      'Rentabilidade com ética e segurança',
+    ],
+  },
+  {
+    id: 'g360',
+    nome: 'Gestão 360° | G360',
+    icon: Briefcase,
+    slogan: 'Quem enxerga o todo, decide melhor.',
+    chamada: 'Enxergue a empresa por inteiro.',
+    descricao:
+      'Uma imersão para empresários e líderes que precisam integrar estratégia, pessoas, processos, finanças, operação e liderança. O G360 amplia a visão sobre o negócio, revela gargalos e fortalece a capacidade de decidir, executar e crescer com método.',
+    topicos: [
+      'Integrar áreas e processos',
+      'Profissionalizar a gestão',
+      'Desenvolver lideranças',
+      'Tomar decisões com mais clareza',
+      'Crescer com eficiência e controle',
+    ],
+  },
+  {
+    id: 'connect-rh',
+    nome: 'Connect RH',
+    icon: Users,
+    slogan: 'Empresas fortes começam com pessoas alinhadas.',
+    chamada: 'Pessoas, cultura e estratégia na mesma direção.',
+    descricao:
+      'Uma imersão sobre o novo papel do RH: menos burocracia, mais impacto no negócio. O Connect RH apresenta práticas atuais para fortalecer cultura, desenvolver lideranças, elevar a produtividade e melhorar a atração e a retenção de talentos.',
+    topicos: [
+      'Estruturar uma gestão de pessoas estratégica',
+      'Fortalecer a cultura organizacional',
+      'Aprimorar processos de RH',
+      'Desenvolver líderes',
+      'Conectar pessoas e resultados',
+    ],
+  },
+  {
+    id: 'connect-ia',
+    nome: 'Connect IA',
+    icon: Cpu,
+    slogan: 'A IA não substitui estratégia. Ela potencializa quem sabe executar.',
+    chamada: 'Inteligência artificial aplicada ao trabalho real.',
+    descricao:
+      'Uma imersão prática para profissionais e equipes que querem incorporar a IA às rotinas, automatizar tarefas e tomar decisões com mais agilidade. O foco não é apenas entender a tecnologia, mas utilizá-la para gerar eficiência e vantagem competitiva.',
+    topicos: [
+      'Aplicar IA no dia a dia',
+      'Automatizar tarefas repetitivas',
+      'Otimizar processos e rotinas',
+      'Aumentar produtividade',
+      'Decidir com mais inteligência',
+    ],
+  },
+  {
+    id: 'connect-tributario',
+    nome: 'Connect Tributário',
+    icon: Scale,
+    slogan: 'Quem entende antes, adapta-se melhor.',
+    chamada: 'Prepare sua empresa para o novo cenário fiscal.',
+    descricao:
+      'Uma imersão que traduz a Reforma Tributária para a realidade das empresas, conectando mudanças legais a seus impactos financeiros, fiscais e operacionais. Empresários e gestores aprendem a antecipar riscos, planejar adaptações e identificar oportunidades com segurança.',
+    topicos: [
+      'Compreender os impactos da Reforma',
+      'Antecipar riscos fiscais e operacionais',
+      'Preparar processos e equipes',
+      'Identificar oportunidades estratégicas',
+      'Decidir com mais segurança',
+    ],
+  },
+  {
+    id: 'growbase',
+    nome: 'GrowBase',
+    icon: TrendingUp,
+    // Fecha a grade em largura total, equilibrando a linha final com o card em destaque
+    wide: true,
+    slogan: 'Escalar não é acelerar no escuro. É construir uma base sólida.',
+    chamada: 'Crescimento exige base, método e direção.',
+    descricao:
+      'Uma solução para empresas que cresceram, mas ainda enfrentam processos desorganizados, gargalos operacionais e decisões pouco previsíveis. O GrowBase ajuda a estruturar a operação, definir prioridades e criar as condições necessárias para escalar com controle.',
+    topicos: [
+      'Organizar processos de crescimento',
+      'Identificar gargalos',
+      'Estruturar a operação',
+      'Melhorar a tomada de decisão',
+      'Crescer com previsibilidade',
+    ],
+  },
+]
+
+const DIFERENCIAIS = [
+  {
+    icon: MapPin,
+    titulo: 'Imersão presencial e exclusiva',
+    texto:
+      'Turmas reduzidas, de apenas 20 participantes, para garantir profundidade, troca real e atenção individual em cada imersão.',
+  },
+  {
+    icon: Network,
+    titulo: 'Networking de alto nível',
+    texto:
+      'Você entra no ecossistema Connect Valley e se conecta a empresários, gestores e especialistas que decidem — dentro e fora da sala.',
+  },
+  {
+    icon: Lightbulb,
+    titulo: 'Metodologia prática',
+    texto:
+      'Nada de teoria solta: o conteúdo é aplicado aos desafios reais da sua empresa, para você sair com método e plano de ação.',
+  },
+]
+
+/* -------------------------------------------------------------------------- */
+/*  Utilitários de animação                                                    */
+/* -------------------------------------------------------------------------- */
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 28 },
+  visible: { opacity: 1, y: 0 },
+}
+
+function Reveal({ children, delay = 0, className = '' }) {
+  return (
+    <motion.div
+      className={className}
+      variants={fadeUp}
+      initial="hidden"
+      whileInView="visible"
+      viewport={{ once: true, amount: 0.2 }}
+      transition={{ duration: 0.6, delay, ease: [0.21, 0.47, 0.32, 0.98] }}
+    >
+      {children}
+    </motion.div>
+  )
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Blocos visuais reutilizáveis                                               */
+/* -------------------------------------------------------------------------- */
+
+function Logo({ compact = false }) {
+  return (
+    <a href="#topo" className="group flex items-center gap-3" aria-label="Connect Academy — início">
+      <span className="relative flex h-11 w-11 items-center justify-center rounded-full bg-[#F5CD55] shadow-[0_0_28px_-6px_rgba(245,205,85,0.85)] transition-transform duration-300 group-hover:scale-105">
+        <Target className="h-6 w-6 text-[#14193C]" strokeWidth={2.4} />
+      </span>
+      <span className={compact ? 'sr-only' : 'leading-none'}>
+        <span className="block text-lg font-extrabold tracking-[0.18em] text-white sm:text-xl">
+          C<span className="text-[#F5CD55]">O</span>NNECT
+        </span>
+        <span className="block text-[0.6rem] font-semibold tracking-[0.55em] text-[#F5CD55] sm:text-xs">
+          ACADEMY
+        </span>
+      </span>
+    </a>
+  )
+}
+
+function Badge({ children, className = '' }) {
+  return (
+    <span
+      className={`inline-flex items-center gap-2 rounded-full border border-[#F5CD55]/40 bg-[#F5CD55]/10 px-4 py-1.5 text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[#F5CD55] backdrop-blur-sm sm:text-xs ${className}`}
+    >
+      {children}
+    </span>
+  )
+}
+
+function PrimaryButton({ href, children, className = '', ...props }) {
+  return (
+    <a
+      href={href}
+      className={`group inline-flex items-center justify-center gap-2.5 rounded-full bg-[#F5CD55] px-7 py-4 text-sm font-bold text-[#14193C] shadow-[0_18px_45px_-18px_rgba(245,205,85,0.95)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#ffdd7a] hover:shadow-[0_22px_55px_-16px_rgba(245,205,85,1)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#F5CD55] focus-visible:ring-offset-2 focus-visible:ring-offset-[#14193C] sm:text-base ${className}`}
+      {...props}
+    >
+      {children}
+    </a>
+  )
+}
+
+function GhostButton({ href, children, className = '' }) {
+  return (
+    <a
+      href={href}
+      className={`group inline-flex items-center justify-center gap-2.5 rounded-full border border-white/20 bg-white/[0.04] px-7 py-4 text-sm font-semibold text-white backdrop-blur-xl transition-all duration-300 hover:-translate-y-0.5 hover:border-[#F5CD55]/60 hover:text-[#F5CD55] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#F5CD55] focus-visible:ring-offset-2 focus-visible:ring-offset-[#14193C] sm:text-base ${className}`}
+    >
+      {children}
+    </a>
+  )
+}
+
+function SectionHeading({ eyebrow, title, highlight, description, center = true }) {
+  return (
+    <div className={`max-w-3xl ${center ? 'mx-auto text-center' : ''}`}>
+      {eyebrow && (
+        <Reveal>
+          <Badge>
+            <Sparkles className="h-3.5 w-3.5" />
+            {eyebrow}
+          </Badge>
+        </Reveal>
+      )}
+      <Reveal delay={0.08}>
+        <h2 className="mt-6 text-3xl font-extrabold leading-tight tracking-tight text-white sm:text-4xl lg:text-[2.75rem]">
+          {title} {highlight && <span className="gold-text animate-shine">{highlight}</span>}
+        </h2>
+      </Reveal>
+      {description && (
+        <Reveal delay={0.16}>
+          <p className="mt-5 text-base leading-relaxed text-white/60 sm:text-lg">{description}</p>
+        </Reveal>
+      )}
+    </div>
+  )
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Header / Navbar                                                            */
+/* -------------------------------------------------------------------------- */
+
+function Navbar() {
+  const [scrolled, setScrolled] = useState(false)
+  const [open, setOpen] = useState(false)
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 24)
+    onScroll()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
+
+  useEffect(() => {
+    document.body.style.overflow = open ? 'hidden' : ''
+    return () => {
+      document.body.style.overflow = ''
+    }
+  }, [open])
+
+  return (
+    <header
+      className={`fixed inset-x-0 top-0 z-50 transition-all duration-300 ${
+        scrolled
+          ? 'border-b border-white/10 bg-[#14193C]/85 backdrop-blur-xl shadow-[0_10px_40px_-20px_rgba(0,0,0,0.9)]'
+          : 'border-b border-transparent bg-transparent'
+      }`}
+    >
+      <nav className="mx-auto flex h-20 max-w-7xl items-center justify-between px-5 sm:px-8">
+        <Logo />
+
+        <ul className="hidden items-center gap-9 lg:flex">
+          {NAV_LINKS.map((link) => (
+            <li key={link.href}>
+              <a
+                href={link.href}
+                className="group relative text-sm font-medium text-white/70 transition-colors hover:text-white"
+              >
+                {link.label}
+                <span className="absolute -bottom-1.5 left-0 h-px w-0 bg-[#F5CD55] transition-all duration-300 group-hover:w-full" />
+              </a>
+            </li>
+          ))}
+        </ul>
+
+        <div className="flex items-center gap-3">
+          <PrimaryButton
+            href={WA_GERAL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hidden px-6 py-3 text-sm sm:inline-flex"
+          >
+            Garantir vaga
+            <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
+          </PrimaryButton>
+
+          <button
+            type="button"
+            onClick={() => setOpen((v) => !v)}
+            aria-label={open ? 'Fechar menu' : 'Abrir menu'}
+            aria-expanded={open}
+            className="flex h-11 w-11 items-center justify-center rounded-full border border-white/15 bg-white/[0.04] text-white backdrop-blur-xl transition-colors hover:border-[#F5CD55]/50 hover:text-[#F5CD55] lg:hidden"
+          >
+            {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </button>
+        </div>
+      </nav>
+
+      {/* Menu mobile */}
+      <div
+        className={`overflow-hidden border-t border-white/10 bg-[#14193C]/95 backdrop-blur-xl transition-[max-height,opacity] duration-300 lg:hidden ${
+          open ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+        }`}
+      >
+        <ul className="space-y-1 px-5 py-5 sm:px-8">
+          {NAV_LINKS.map((link) => (
+            <li key={link.href}>
+              <a
+                href={link.href}
+                onClick={() => setOpen(false)}
+                className="flex items-center justify-between rounded-2xl px-4 py-3.5 text-base font-medium text-white/80 transition-colors hover:bg-white/[0.05] hover:text-[#F5CD55]"
+              >
+                {link.label}
+                <ArrowRight className="h-4 w-4 opacity-40" />
+              </a>
+            </li>
+          ))}
+          <li className="pt-3">
+            <PrimaryButton
+              href={WA_GERAL}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => setOpen(false)}
+              className="w-full"
+            >
+              Garantir vaga
+              <ArrowRight className="h-4 w-4" />
+            </PrimaryButton>
+          </li>
+        </ul>
+      </div>
+    </header>
+  )
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Hero                                                                       */
+/* -------------------------------------------------------------------------- */
+
+function useCountdown(targetDate) {
+  const [restante, setRestante] = useState(() => new Date(targetDate).getTime() - Date.now())
+
+  useEffect(() => {
+    const alvo = new Date(targetDate).getTime()
+    const id = setInterval(() => setRestante(alvo - Date.now()), 1000)
+    return () => clearInterval(id)
+  }, [targetDate])
+
+  if (!(restante > 0)) return null
+
+  const segundosTotais = Math.floor(restante / 1000)
+  return {
+    dias: Math.floor(segundosTotais / 86400),
+    horas: Math.floor((segundosTotais % 86400) / 3600),
+    minutos: Math.floor((segundosTotais % 3600) / 60),
+    segundos: segundosTotais % 60,
+  }
+}
+
+function ScarcityCard() {
+  const countdown = useCountdown(EVENT_DATE)
+
+  const blocos = countdown
+    ? [
+        { valor: countdown.dias, label: 'dias' },
+        { valor: countdown.horas, label: 'horas' },
+        { valor: countdown.minutos, label: 'min' },
+        { valor: countdown.segundos, label: 'seg' },
+      ]
+    : []
+
+  return (
+    <div className="glass-gold relative overflow-hidden p-6 sm:p-7">
+      <div className="pointer-events-none absolute -right-10 -top-10 h-36 w-36 rounded-full bg-[#F5CD55]/20 blur-3xl" />
+
+      <div className="relative flex items-start gap-4">
+        <span className="mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#F5CD55] text-[#14193C]">
+          <Users className="h-5 w-5" strokeWidth={2.4} />
+        </span>
+        <div>
+          <p className="text-base font-bold text-white sm:text-lg">Vagas limitadas</p>
+          <p className="mt-1 text-sm leading-relaxed text-white/65">
+            Apenas <span className="font-bold text-[#F5CD55]">{VAGAS_POR_TURMA} participantes</span>{' '}
+            por turma — formato presencial e exclusivo.
+          </p>
+        </div>
+      </div>
+
+      {blocos.length > 0 && (
+        <div className="relative mt-6 border-t border-[#F5CD55]/20 pt-5">
+          <p className="mb-3 flex items-center gap-2 text-[0.65rem] font-semibold uppercase tracking-[0.22em] text-white/45">
+            <Calendar className="h-3.5 w-3.5 text-[#F5CD55]" />
+            Contagem para o pré-evento
+          </p>
+          <div className="grid grid-cols-4 gap-2.5">
+            {blocos.map((b) => (
+              <div
+                key={b.label}
+                className="rounded-2xl border border-white/10 bg-[#14193C]/60 py-3 text-center backdrop-blur-sm"
+              >
+                <span className="block text-xl font-extrabold tabular-nums text-[#F5CD55] sm:text-2xl">
+                  {String(b.valor).padStart(2, '0')}
+                </span>
+                <span className="mt-0.5 block text-[0.6rem] uppercase tracking-widest text-white/45">
+                  {b.label}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function Hero() {
+  return (
+    <section id="topo" className="relative overflow-hidden pb-24 pt-32 sm:pb-28 sm:pt-40 lg:pt-44">
+      {/* Fundo: degradês suaves navy + halos dourados */}
+      <div className="pointer-events-none absolute inset-0 -z-10">
+        <div className="absolute inset-0 bg-[radial-gradient(120%_90%_at_50%_-10%,#1d2455_0%,#14193C_45%,#0D1129_100%)]" />
+        <div className="absolute -left-40 top-24 h-[26rem] w-[26rem] rounded-full bg-[#F5CD55]/10 blur-[130px]" />
+        <div className="absolute -right-32 top-1/3 h-[30rem] w-[30rem] rounded-full bg-[#F5CD55]/[0.07] blur-[150px]" />
+        <div
+          className="absolute inset-0 opacity-[0.35]"
+          style={{
+            backgroundImage:
+              'linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px)',
+            backgroundSize: '64px 64px',
+            maskImage: 'radial-gradient(70% 55% at 50% 40%, #000 0%, transparent 100%)',
+            WebkitMaskImage: 'radial-gradient(70% 55% at 50% 40%, #000 0%, transparent 100%)',
+          }}
+        />
+      </div>
+
+      <div className="mx-auto grid max-w-7xl items-center gap-14 px-5 sm:px-8 lg:grid-cols-[1.15fr_0.85fr] lg:gap-16">
+        {/* Coluna de texto */}
+        <div>
+          <Reveal>
+            <Badge>
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-pulse-ring rounded-full bg-[#F5CD55]" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-[#F5CD55]" />
+              </span>
+              Pré-evento 18 fev · Imersão 19 e 20 fev — apenas {VAGAS_POR_TURMA} vagas
+            </Badge>
+          </Reveal>
+
+          <Reveal delay={0.1}>
+            <h1 className="mt-7 text-[2.6rem] font-extrabold leading-[1.05] tracking-tight text-white sm:text-6xl lg:text-[4.25rem]">
+              Gestão. Pessoas.
+              <br />
+              <span className="gold-text animate-shine">Crescimento. Futuro.</span>
+            </h1>
+          </Reveal>
+
+          <Reveal delay={0.18}>
+            <p className="mt-7 max-w-xl text-base leading-relaxed text-white/65 sm:text-lg">
+              Conectamos conhecimento, prática e estratégia para formar líderes mais preparados e
+              empresas mais fortes.{' '}
+              <span className="font-medium text-white">
+                Escolha a imersão ideal para o seu momento.
+              </span>
+            </p>
+          </Reveal>
+
+          <Reveal delay={0.26}>
+            <div className="mt-10 flex flex-col gap-4 sm:flex-row sm:items-center">
+              <PrimaryButton href={WA_GERAL} target="_blank" rel="noopener noreferrer">
+                <MessageCircle className="h-5 w-5" strokeWidth={2.4} />
+                Fale com a nossa equipe
+              </PrimaryButton>
+              <GhostButton href="#imersoes">
+                Ver trilhas de imersão
+                <ChevronDown className="h-4 w-4 transition-transform duration-300 group-hover:translate-y-0.5" />
+              </GhostButton>
+            </div>
+          </Reveal>
+
+          <Reveal delay={0.34}>
+            <dl className="mt-12 grid max-w-lg grid-cols-3 gap-4 border-t border-white/10 pt-8">
+              {[
+                { valor: '06', label: 'trilhas de imersão' },
+                { valor: '20', label: 'vagas por turma' },
+                { valor: '100%', label: 'presencial e prático' },
+              ].map((item) => (
+                <div key={item.label}>
+                  <dt className="text-2xl font-extrabold text-[#F5CD55] sm:text-3xl">
+                    {item.valor}
+                  </dt>
+                  <dd className="mt-1 text-[0.7rem] uppercase leading-snug tracking-wider text-white/45 sm:text-xs">
+                    {item.label}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          </Reveal>
+        </div>
+
+        {/* Coluna visual */}
+        <Reveal delay={0.2}>
+          <div className="relative">
+            <div className="pointer-events-none absolute -inset-8 -z-10 rounded-full bg-[#F5CD55]/10 blur-[90px]" />
+
+            <div className="glass relative overflow-hidden p-8 sm:p-10">
+              <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#F5CD55]/60 to-transparent" />
+
+              <div className="flex justify-center">
+                <div className="relative flex h-32 w-32 animate-float items-center justify-center rounded-full bg-gradient-to-br from-[#F5CD55] to-[#d9ab34] shadow-[0_0_70px_-12px_rgba(245,205,85,0.7)]">
+                  <Target className="h-16 w-16 text-[#14193C]" strokeWidth={1.8} />
+                </div>
+              </div>
+
+              <p className="mt-8 text-center text-xl font-bold leading-snug text-white sm:text-2xl">
+                Sua empresa está pronta para o{' '}
+                <span className="text-[#F5CD55]">próximo nível?</span>
+              </p>
+
+              <div className="mt-8 space-y-3">
+                {[
+                  { icon: Calendar, texto: 'Pré-evento: 18 de fevereiro' },
+                  { icon: Calendar, texto: 'Imersão: 19 e 20 de fevereiro' },
+                  { icon: MapPin, texto: 'Presencial e exclusiva' },
+                ].map((item) => (
+                  <div
+                    key={item.texto}
+                    className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 backdrop-blur-sm"
+                  >
+                    <item.icon className="h-4 w-4 shrink-0 text-[#F5CD55]" />
+                    <span className="text-sm font-medium text-white/80">{item.texto}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="mt-5">
+              <ScarcityCard />
+            </div>
+          </div>
+        </Reveal>
+      </div>
+    </section>
+  )
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Sobre                                                                      */
+/* -------------------------------------------------------------------------- */
+
+function About() {
+  return (
+    <section
+      id="sobre"
+      className="relative overflow-hidden border-t border-white/[0.06] py-24 sm:py-28"
+    >
+      <div className="pointer-events-none absolute inset-0 -z-10 bg-[linear-gradient(180deg,#14193C_0%,#161C46_50%,#14193C_100%)]" />
+
+      <div className="mx-auto max-w-7xl px-5 sm:px-8">
+        <div className="grid items-center gap-14 lg:grid-cols-2 lg:gap-20">
+          <div>
+            <SectionHeading
+              center={false}
+              eyebrow="O que é o Connect Academy"
+              title="A escola de negócios do"
+              highlight="ecossistema Connect Valley"
+              description="Por meio de imersões práticas, preparamos empresários, gestores, líderes e equipes para enfrentar desafios reais de gestão, estratégia, pessoas, tecnologia e crescimento."
+            />
+
+            <Reveal delay={0.24}>
+              <div className="glass-gold mt-10 p-7 sm:p-8">
+                <p className="text-lg font-bold leading-snug text-white sm:text-xl">
+                  Aqui, conhecimento se transforma em{' '}
+                  <span className="gold-text animate-shine">
+                    método, decisões melhores e resultados sustentáveis.
+                  </span>
+                </p>
+              </div>
+            </Reveal>
+
+            <Reveal delay={0.32}>
+              <div className="mt-8">
+                <PrimaryButton href={WA_GERAL} target="_blank" rel="noopener noreferrer">
+                  Conheça as próximas turmas
+                  <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
+                </PrimaryButton>
+              </div>
+            </Reveal>
+          </div>
+
+          <div className="grid gap-5 sm:grid-cols-2">
+            {[
+              {
+                icon: Briefcase,
+                titulo: 'Para quem decide',
+                texto: 'Empresários, gestores, líderes e equipes que precisam de resultado.',
+              },
+              {
+                icon: Target,
+                titulo: 'Desafios reais',
+                texto: 'Gestão, estratégia, pessoas, tecnologia e crescimento na prática.',
+              },
+              {
+                icon: Sparkles,
+                titulo: 'Método antes de teoria',
+                texto: 'Conteúdo aplicável, transformado em rotina e processo na sua empresa.',
+              },
+              {
+                icon: TrendingUp,
+                titulo: 'Resultado sustentável',
+                texto: 'Decisões melhores hoje, base sólida para crescer com previsibilidade.',
+              },
+            ].map((item, i) => (
+              <Reveal key={item.titulo} delay={0.1 + i * 0.08}>
+                <div className="glass group h-full p-6 transition-all duration-300 hover:-translate-y-1 hover:border-[#F5CD55]/35">
+                  <span className="flex h-11 w-11 items-center justify-center rounded-2xl border border-[#F5CD55]/25 bg-[#F5CD55]/10 text-[#F5CD55] transition-colors duration-300 group-hover:bg-[#F5CD55] group-hover:text-[#14193C]">
+                    <item.icon className="h-5 w-5" strokeWidth={2.2} />
+                  </span>
+                  <h3 className="mt-5 text-base font-bold text-white">{item.titulo}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-white/55">{item.texto}</p>
+                </div>
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Trilhas / Imersões                                                         */
+/* -------------------------------------------------------------------------- */
+
+function TrackCard({ track, index }) {
+  const Icon = track.icon
+  const destaque = Boolean(track.destaque)
+  const largo = destaque || Boolean(track.wide)
+
+  return (
+    <Reveal delay={Math.min(index, 3) * 0.08} className={largo ? 'md:col-span-2' : ''}>
+      <article
+        id={track.id}
+        className={`group relative flex h-full flex-col overflow-hidden p-7 transition-all duration-300 hover:-translate-y-1.5 sm:p-8 ${
+          destaque ? 'glass-gold hover:border-[#F5CD55]/60' : 'glass hover:border-[#F5CD55]/35'
+        }`}
+      >
+        <div className="pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full bg-[#F5CD55]/10 blur-3xl transition-opacity duration-500 group-hover:opacity-100 sm:opacity-0" />
+
+        {destaque && (
+          <span className="absolute right-6 top-6 rounded-full bg-[#F5CD55] px-3 py-1 text-[0.6rem] font-extrabold uppercase tracking-[0.18em] text-[#14193C]">
+            Em destaque
+          </span>
+        )}
+
+        <div className="relative flex items-center gap-4">
+          <span
+            className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl transition-all duration-300 ${
+              destaque
+                ? 'bg-[#F5CD55] text-[#14193C]'
+                : 'border border-[#F5CD55]/25 bg-[#F5CD55]/10 text-[#F5CD55] group-hover:bg-[#F5CD55] group-hover:text-[#14193C]'
+            }`}
+          >
+            <Icon className="h-7 w-7" strokeWidth={2} />
+          </span>
+          <div className="min-w-0">
+            <h3 className="text-xl font-extrabold leading-tight text-white sm:text-2xl">
+              {track.nome}
+            </h3>
+            <p className="mt-1 text-sm font-medium text-[#F5CD55]">{track.chamada}</p>
+          </div>
+        </div>
+
+        <p className="relative mt-6 text-sm leading-relaxed text-white/60">{track.descricao}</p>
+
+        <ul
+          className={`relative mt-6 grid gap-2.5 ${largo ? 'sm:grid-cols-2' : ''}`}
+          aria-label={`O que você aprende no ${track.nome}`}
+        >
+          {track.topicos.map((topico) => (
+            <li key={topico} className="flex items-start gap-2.5">
+              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#F5CD55]" strokeWidth={2.4} />
+              <span className="text-sm leading-snug text-white/75">{topico}</span>
+            </li>
+          ))}
+        </ul>
+
+        <div className="relative mt-auto pt-7">
+          <p className="rounded-2xl border-l-2 border-[#F5CD55] bg-[#F5CD55]/[0.07] px-5 py-4 text-sm font-semibold italic leading-snug text-white">
+            “{track.slogan}”
+          </p>
+
+          <a
+            href={waLink(
+              `Olá! Tenho interesse na imersão ${track.nome} do Connect Academy. Pode me enviar mais informações?`,
+            )}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-5 inline-flex items-center gap-2 text-sm font-bold text-[#F5CD55] transition-colors hover:text-white"
+          >
+            Quero esta imersão
+            <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
+          </a>
+        </div>
+      </article>
+    </Reveal>
+  )
+}
+
+function Tracks() {
+  return (
+    <section
+      id="imersoes"
+      className="relative overflow-hidden border-t border-white/[0.06] py-24 sm:py-28"
+    >
+      <div className="pointer-events-none absolute inset-0 -z-10 bg-[#14193C]">
+        <div className="absolute left-1/2 top-0 h-96 w-[42rem] -translate-x-1/2 rounded-full bg-[#F5CD55]/[0.06] blur-[140px]" />
+      </div>
+
+      <div className="mx-auto max-w-7xl px-5 sm:px-8">
+        <SectionHeading
+          eyebrow="Trilhas de imersão"
+          title="Escolha a imersão ideal"
+          highlight="para o seu momento"
+          description="Seis trilhas construídas para resolver problemas reais de gestão. Todas presenciais, práticas e com turmas de no máximo 20 participantes."
+        />
+
+        <div className="mt-14 grid gap-6 md:grid-cols-2">
+          {TRACKS.map((track, i) => (
+            <TrackCard key={track.id} track={track} index={i} />
+          ))}
+        </div>
+
+        <Reveal delay={0.1}>
+          <p className="mt-12 text-center text-sm text-white/45">
+            Não sabe qual trilha escolher?{' '}
+            <a
+              href={waLink(
+                'Olá! Não sei qual trilha do Connect Academy é a ideal para o meu momento. Podem me ajudar?',
+              )}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-semibold text-[#F5CD55] underline decoration-[#F5CD55]/40 underline-offset-4 transition-colors hover:text-white"
+            >
+              Fale com a nossa equipe
+            </a>{' '}
+            e receba uma recomendação.
+          </p>
+        </Reveal>
+      </div>
+    </section>
+  )
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Diferenciais                                                               */
+/* -------------------------------------------------------------------------- */
+
+function Why() {
+  return (
+    <section
+      id="diferenciais"
+      className="relative overflow-hidden border-t border-white/[0.06] py-24 sm:py-28"
+    >
+      <div className="pointer-events-none absolute inset-0 -z-10 bg-[linear-gradient(180deg,#14193C_0%,#171D48_50%,#14193C_100%)]" />
+
+      <div className="mx-auto max-w-7xl px-5 sm:px-8">
+        <SectionHeading
+          eyebrow="Por que participar"
+          title="Uma imersão feita para"
+          highlight="mudar a sua operação"
+          description="O Connect Academy não entrega mais um curso. Entrega método, contexto e rede — os três ativos que separam quem aprende de quem executa."
+        />
+
+        <div className="mt-14 grid gap-6 md:grid-cols-3">
+          {DIFERENCIAIS.map((item, i) => (
+            <Reveal key={item.titulo} delay={i * 0.1}>
+              <div className="glass group relative h-full overflow-hidden p-8 transition-all duration-300 hover:-translate-y-1.5 hover:border-[#F5CD55]/35">
+                <span className="absolute right-6 top-6 text-5xl font-extrabold text-white/[0.04] transition-colors duration-300 group-hover:text-[#F5CD55]/10">
+                  0{i + 1}
+                </span>
+                <span className="flex h-14 w-14 items-center justify-center rounded-2xl border border-[#F5CD55]/25 bg-[#F5CD55]/10 text-[#F5CD55] transition-colors duration-300 group-hover:bg-[#F5CD55] group-hover:text-[#14193C]">
+                  <item.icon className="h-7 w-7" strokeWidth={2} />
+                </span>
+                <h3 className="mt-6 text-lg font-extrabold leading-snug text-white sm:text-xl">
+                  {item.titulo}
+                </h3>
+                <p className="mt-3 text-sm leading-relaxed text-white/60">{item.texto}</p>
+              </div>
+            </Reveal>
+          ))}
+        </div>
+
+        {/* Faixa de datas */}
+        <Reveal delay={0.2}>
+          <div className="glass-gold mt-12 flex flex-col items-center justify-between gap-6 p-8 text-center sm:p-10 lg:flex-row lg:text-left">
+            <div className="flex flex-col items-center gap-6 sm:flex-row sm:items-center">
+              <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[#F5CD55] text-[#14193C]">
+                <Calendar className="h-7 w-7" strokeWidth={2.2} />
+              </span>
+              <div>
+                <p className="text-[0.65rem] font-semibold uppercase tracking-[0.24em] text-[#F5CD55]">
+                  Presencial e exclusiva
+                </p>
+                <p className="mt-2 text-xl font-extrabold text-white sm:text-2xl">
+                  Pré-evento 18 fev · Imersão 19 e 20 fev
+                </p>
+                <p className="mt-1 text-sm text-white/55">
+                  Apenas {VAGAS_POR_TURMA} participantes por turma.
+                </p>
+              </div>
+            </div>
+
+            <PrimaryButton
+              href={WA_GERAL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full shrink-0 lg:w-auto"
+            >
+              Garantir vaga
+              <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
+            </PrimaryButton>
+          </div>
+        </Reveal>
+      </div>
+    </section>
+  )
+}
+
+/* -------------------------------------------------------------------------- */
+/*  CTA final + Footer                                                         */
+/* -------------------------------------------------------------------------- */
+
+function FinalCTA() {
+  return (
+    <section id="contato" className="relative overflow-hidden py-24 sm:py-32">
+      <div className="pointer-events-none absolute inset-0 -z-10">
+        <div className="absolute inset-0 bg-[radial-gradient(90%_80%_at_50%_100%,#1d2455_0%,#14193C_55%,#0D1129_100%)]" />
+        <div className="absolute bottom-0 left-1/2 h-96 w-[46rem] -translate-x-1/2 rounded-full bg-[#F5CD55]/10 blur-[130px]" />
+      </div>
+
+      <div className="mx-auto max-w-4xl px-5 text-center sm:px-8">
+        <Reveal>
+          <div className="mx-auto flex h-20 w-20 animate-float items-center justify-center rounded-full bg-gradient-to-br from-[#F5CD55] to-[#d9ab34] shadow-[0_0_60px_-10px_rgba(245,205,85,0.75)]">
+            <Target className="h-10 w-10 text-[#14193C]" strokeWidth={1.9} />
+          </div>
+        </Reveal>
+
+        <Reveal delay={0.1}>
+          <h2 className="mt-9 text-3xl font-extrabold leading-tight tracking-tight text-white sm:text-5xl">
+            Sua empresa está pronta para o{' '}
+            <span className="gold-text animate-shine">próximo nível?</span>
+          </h2>
+        </Reveal>
+
+        <Reveal delay={0.18}>
+          <p className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-white/65 sm:text-lg">
+            Fale com a nossa equipe, conheça as próximas turmas e garanta uma das{' '}
+            <span className="font-semibold text-[#F5CD55]">{VAGAS_POR_TURMA} vagas</span> da imersão
+            que faz sentido para o seu momento.
+          </p>
+        </Reveal>
+
+        <Reveal delay={0.26}>
+          <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
+            <PrimaryButton href={WA_GERAL} target="_blank" rel="noopener noreferrer">
+              <MessageCircle className="h-5 w-5" strokeWidth={2.4} />
+              Falar no WhatsApp · {WHATSAPP_DISPLAY}
+            </PrimaryButton>
+            <GhostButton href={INSTAGRAM_URL}>
+              <Instagram className="h-5 w-5" />@{INSTAGRAM_HANDLE}
+            </GhostButton>
+          </div>
+        </Reveal>
+
+        <Reveal delay={0.34}>
+          <p className="mt-8 text-xs uppercase tracking-[0.24em] text-white/35">
+            Resposta rápida · Turmas em formação
+          </p>
+        </Reveal>
+      </div>
+    </section>
+  )
+}
+
+function Footer() {
+  const ano = new Date().getFullYear()
+
+  return (
+    <footer className="border-t border-white/10 bg-[#0D1129]">
+      <div className="mx-auto max-w-7xl px-5 py-14 sm:px-8">
+        <div className="grid gap-10 md:grid-cols-[1.4fr_1fr_1fr]">
+          <div>
+            <Logo />
+            <p className="mt-5 max-w-sm text-sm leading-relaxed text-[#727272]">
+              A escola de negócios e inteligência corporativa do ecossistema Connect Valley.
+              Imersões práticas para empresários, gestores, líderes e equipes.
+            </p>
+          </div>
+
+          <nav aria-label="Navegação do rodapé">
+            <h3 className="text-xs font-semibold uppercase tracking-[0.22em] text-[#F5CD55]">
+              Navegação
+            </h3>
+            <ul className="mt-5 space-y-3">
+              {NAV_LINKS.map((link) => (
+                <li key={link.href}>
+                  <a
+                    href={link.href}
+                    className="text-sm text-white/60 transition-colors hover:text-[#F5CD55]"
+                  >
+                    {link.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </nav>
+
+          <div>
+            <h3 className="text-xs font-semibold uppercase tracking-[0.22em] text-[#F5CD55]">
+              Contato
+            </h3>
+            <ul className="mt-5 space-y-3">
+              <li>
+                <a
+                  href={WA_GERAL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2.5 text-sm text-white/60 transition-colors hover:text-[#F5CD55]"
+                >
+                  <MessageCircle className="h-4 w-4 text-[#F5CD55]" />
+                  {WHATSAPP_DISPLAY}
+                </a>
+              </li>
+              <li>
+                <a
+                  href={INSTAGRAM_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2.5 text-sm text-white/60 transition-colors hover:text-[#F5CD55]"
+                >
+                  <Instagram className="h-4 w-4 text-[#F5CD55]" />@{INSTAGRAM_HANDLE}
+                </a>
+              </li>
+              <li className="inline-flex items-center gap-2.5 text-sm text-white/60">
+                <Calendar className="h-4 w-4 text-[#F5CD55]" />
+                Pré-evento 18 fev · Imersão 19 e 20 fev
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-white/10 pt-8 text-center sm:flex-row sm:text-left">
+          <p className="text-xs text-[#727272]">
+            © {ano} Connect Academy® · Connect Valley. Todos os direitos reservados.
+          </p>
+          <p className="text-xs text-[#727272]">Gestão. Pessoas. Crescimento. Futuro.</p>
+        </div>
+      </div>
+    </footer>
+  )
+}
+
+function FloatingWhatsApp() {
+  return (
+    <a
+      href={WA_GERAL}
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label="Falar com a equipe do Connect Academy no WhatsApp"
+      className="group fixed bottom-6 right-5 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-[#F5CD55] text-[#14193C] shadow-[0_16px_40px_-12px_rgba(245,205,85,0.9)] transition-transform duration-300 hover:scale-110 sm:bottom-8 sm:right-8"
+    >
+      <span className="absolute inset-0 animate-pulse-ring rounded-full bg-[#F5CD55]" />
+      <MessageCircle className="relative h-6 w-6" strokeWidth={2.4} />
+    </a>
+  )
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Página                                                                     */
+/* -------------------------------------------------------------------------- */
+
+export default function ConnectAcademyLanding() {
+  return (
+    <div className="min-h-screen overflow-x-clip bg-[#14193C] font-sans text-white">
+      <Navbar />
+      <main>
+        <Hero />
+        <About />
+        <Tracks />
+        <Why />
+        <FinalCTA />
+      </main>
+      <Footer />
+      <FloatingWhatsApp />
+    </div>
+  )
+}
