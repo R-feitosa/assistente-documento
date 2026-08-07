@@ -307,46 +307,63 @@ function ConnectMark({ className = 'h-3.5 w-3.5', ...props }) {
  *
  * Quem pediu menos movimento no sistema recebe direto o quadro final.
  */
-const VOO = 0.75 // segundos de voo — o impacto e o anel se ancoram nesse tempo
+/**
+ * Ciclo da animação, em segundos, e os instantes de cada etapa como fração dele.
+ * A flecha volta ao ponto de partida recuando pelo mesmo eixo: como as seções
+ * recortam o que passa das bordas, ela sai de quadro e o reinício não aparece —
+ * por isso o laço dispensa qualquer fade.
+ */
+const CICLO = 4.4
+const T_ACERTO = 0.75 / CICLO // flecha crava no alvo
+const T_RECUO = 3.65 / CICLO // começa a recuar
+const T_FORA = 3.97 / CICLO // já saiu de quadro; o resto do ciclo é pausa
 
 function AnimatedTarget({ className = 'h-24', delay = 0, alt = 'Símbolo do Connect Academy' }) {
   const semMovimento = useReducedMotion()
   const ref = useRef(null)
   // O gatilho observa o container, não as camadas: a flecha começa fora da tela e
-  // um whileInView nela própria nunca dispararia.
-  const emCena = useInView(ref, { once: true, amount: 0.4 })
+  // um whileInView nela própria nunca dispararia. Sem `once`, o laço só roda
+  // enquanto o símbolo está à vista.
+  const emCena = useInView(ref, { amount: 0.4 })
 
   const sombra = 'drop-shadow-[0_18px_45px_rgba(0,0,0,0.55)]'
   const estado = emCena ? 'acerto' : 'parado'
+  const emLaco = { duration: CICLO, repeat: Infinity, delay }
 
   const alvoVar = {
     parado: { scale: 1 },
     acerto: {
-      scale: [1, 1, 1.09, 0.97, 1],
-      transition: { duration: VOO + 0.34, delay, times: [0, 0.68, 0.78, 0.89, 1] },
+      scale: [1, 1, 1.09, 0.97, 1, 1],
+      transition: {
+        ...emLaco,
+        times: [0, T_ACERTO, T_ACERTO + 0.028, T_ACERTO + 0.06, T_ACERTO + 0.11, 1],
+      },
     },
   }
 
   const anelVar = {
     parado: { scale: 0.25, opacity: 0 },
     acerto: {
-      scale: [0.25, 0.25, 1, 1.75],
-      opacity: [0, 0, 0.8, 0],
-      transition: { duration: VOO + 0.55, delay, times: [0, 0.58, 0.72, 1], ease: 'easeOut' },
+      scale: [0.25, 0.25, 1, 1.75, 1.75],
+      opacity: [0, 0, 0.8, 0, 0],
+      transition: {
+        ...emLaco,
+        ease: 'easeOut',
+        times: [0, T_ACERTO, T_ACERTO + 0.055, T_ACERTO + 0.15, 1],
+      },
     },
   }
 
   const flechaVar = {
-    parado: { x: '70vw', y: '-70vw', opacity: 0 },
+    parado: { x: '70vw', y: '-70vw' },
     acerto: {
-      x: 0,
-      y: 0,
-      opacity: 1,
+      // voa até o alvo · fica cravada · recua para fora de quadro · pausa
+      x: ['70vw', 0, 0, '70vw', '70vw'],
+      y: ['-70vw', 0, 0, '-70vw', '-70vw'],
       transition: {
-        duration: VOO,
-        delay,
-        ease: [0.16, 0.86, 0.3, 1],
-        opacity: { duration: 0.12, delay },
+        ...emLaco,
+        times: [0, T_ACERTO, T_RECUO, T_FORA, 1],
+        ease: [[0.16, 0.86, 0.3, 1], 'linear', 'easeIn', 'linear'],
       },
     },
   }
