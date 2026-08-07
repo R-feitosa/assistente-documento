@@ -17,8 +17,8 @@
  * com Tailwind configurado.
  */
 
-import { useEffect, useId, useState } from 'react'
-import { motion } from 'framer-motion'
+import { useEffect, useId, useRef, useState } from 'react'
+import { motion, useInView, useReducedMotion } from 'framer-motion'
 import {
   ArrowRight,
   Briefcase,
@@ -44,7 +44,8 @@ import {
 /* Assets oficiais da marca (extraídos do Manual de Marca e do Folder 2026) */
 import logoConnectAcademy from './assets/logo-connect-academy.png'
 import logoConnectMed from './assets/logo-connect-med.webp'
-import target3d from './assets/target-3d.webp'
+import targetAlvo from './assets/target-alvo.webp'
+import targetFlecha from './assets/target-flecha.webp'
 import badgeG360 from './assets/badge-g360.png'
 import badgeRh from './assets/badge-rh.png'
 import badgeIa from './assets/badge-ia.png'
@@ -292,6 +293,105 @@ function ConnectMark({ className = 'h-3.5 w-3.5', ...props }) {
       <path d="M10.5 13.5 L19.6 4.4" />
       <path d="M15.2 3.4 L20.6 3.4 L20.6 8.8" />
     </svg>
+  )
+}
+
+/**
+ * Símbolo 3D do Connect Academy com a flecha animada.
+ *
+ * A arte original vinha num arquivo só; a flecha foi separada do alvo em duas
+ * camadas que se recompõem pixel a pixel — por isso o quadro final é idêntico à
+ * imagem estática. Ao entrar em cena, a flecha vem do canto superior direito
+ * (no eixo de 45° em que ela já está desenhada, dispensando rotação), o alvo dá
+ * um coice no impacto e um anel dourado se expande.
+ *
+ * Quem pediu menos movimento no sistema recebe direto o quadro final.
+ */
+const VOO = 0.75 // segundos de voo — o impacto e o anel se ancoram nesse tempo
+
+function AnimatedTarget({ className = 'h-24', delay = 0, alt = 'Símbolo do Connect Academy' }) {
+  const semMovimento = useReducedMotion()
+  const ref = useRef(null)
+  // O gatilho observa o container, não as camadas: a flecha começa fora da tela e
+  // um whileInView nela própria nunca dispararia.
+  const emCena = useInView(ref, { once: true, amount: 0.4 })
+
+  const sombra = 'drop-shadow-[0_18px_45px_rgba(0,0,0,0.55)]'
+  const estado = emCena ? 'acerto' : 'parado'
+
+  const alvoVar = {
+    parado: { scale: 1 },
+    acerto: {
+      scale: [1, 1, 1.09, 0.97, 1],
+      transition: { duration: VOO + 0.34, delay, times: [0, 0.68, 0.78, 0.89, 1] },
+    },
+  }
+
+  const anelVar = {
+    parado: { scale: 0.25, opacity: 0 },
+    acerto: {
+      scale: [0.25, 0.25, 1, 1.75],
+      opacity: [0, 0, 0.8, 0],
+      transition: { duration: VOO + 0.55, delay, times: [0, 0.58, 0.72, 1], ease: 'easeOut' },
+    },
+  }
+
+  const flechaVar = {
+    parado: { x: '70vw', y: '-70vw', opacity: 0 },
+    acerto: {
+      x: 0,
+      y: 0,
+      opacity: 1,
+      transition: {
+        duration: VOO,
+        delay,
+        ease: [0.16, 0.86, 0.3, 1],
+        opacity: { duration: 0.12, delay },
+      },
+    },
+  }
+
+  if (semMovimento) {
+    return (
+      <span className={`relative inline-block ${className}`}>
+        <img src={targetAlvo} alt={alt} className={`h-full w-auto ${sombra}`} />
+        <img src={targetFlecha} alt="" aria-hidden="true" className="absolute inset-0 h-full w-full" />
+      </span>
+    )
+  }
+
+  return (
+    <span ref={ref} className={`relative inline-block ${className}`}>
+      {/* Alvo — recua no impacto */}
+      <motion.img
+        src={targetAlvo}
+        alt={alt}
+        className={`h-full w-auto ${sombra}`}
+        variants={alvoVar}
+        initial="parado"
+        animate={estado}
+      />
+
+      {/* Anel de impacto */}
+      <motion.span
+        aria-hidden="true"
+        className="pointer-events-none absolute left-1/2 top-1/2 h-3/4 w-3/4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-[#F5CD55]"
+        variants={anelVar}
+        initial="parado"
+        animate={estado}
+      />
+
+      {/* Flecha — entra pelo canto superior direito, no próprio eixo de 45° */}
+      <motion.img
+        src={targetFlecha}
+        alt=""
+        aria-hidden="true"
+        className="absolute inset-0 h-full w-full"
+        variants={flechaVar}
+        initial="parado"
+        animate={estado}
+      />
+    </span>
   )
 }
 
@@ -635,11 +735,9 @@ function Hero() {
               <div className="relative flex justify-center">
                 {/* Halo dourado para o alvo 3D destacar-se do navy */}
                 <div className="pointer-events-none absolute left-1/2 top-1/2 h-48 w-48 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#F5CD55]/25 blur-[55px] sm:h-56 sm:w-56" />
-                <img
-                  src={target3d}
-                  alt="Símbolo do Connect Academy"
-                  className="relative h-36 w-auto animate-float drop-shadow-[0_18px_45px_rgba(0,0,0,0.55)] sm:h-44"
-                />
+                <span className="relative animate-float">
+                  <AnimatedTarget className="h-36 sm:h-44" delay={0.35} />
+                </span>
               </div>
 
               <p className="mt-8 text-center text-xl font-bold leading-snug text-white sm:text-2xl">
@@ -1111,11 +1209,9 @@ function FinalCTA() {
         <Reveal>
           <div className="relative mx-auto w-fit">
             <div className="pointer-events-none absolute left-1/2 top-1/2 h-36 w-36 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#F5CD55]/25 blur-[50px]" />
-            <img
-              src={target3d}
-              alt="Símbolo do Connect Academy"
-              className="relative h-24 w-auto animate-float drop-shadow-[0_18px_45px_rgba(0,0,0,0.55)] sm:h-28"
-            />
+            <span className="relative block animate-float">
+              <AnimatedTarget className="h-24 sm:h-28" />
+            </span>
           </div>
         </Reveal>
 
