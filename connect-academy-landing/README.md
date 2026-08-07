@@ -27,14 +27,25 @@ Construída a partir do folder institucional 2026 e do Manual de Marca do RF Gro
 Estilo visual: dark mode elegante, glassmorphism em tom navy (`.glass` e `.glass-gold`
 em `src/index.css`), bordas sutis douradas e degradês radiais suaves.
 
+## Assets da marca
+
+Os logos, badges de trilha e fotos em `src/assets/` foram **extraídos dos arquivos
+oficiais** (Manual de Marca RF Group e Folder Connect Academy 2026) — nenhum foi
+recriado. A procedência de cada arquivo está em [`src/assets/README.md`](src/assets/README.md).
+
 ## Como rodar
 
 ```bash
 npm install
-npm run dev      # http://localhost:5173
-npm run build    # gera dist/
-npm run preview  # serve o build de produção
+npm run dev        # http://localhost:5173
+npm run build      # gera dist/
+npm run preview    # serve o build de produção
+npm run standalone # gera dist-standalone/connect-academy.html (arquivo único)
 ```
+
+O `standalone` embute CSS, JS, imagens e a fonte Poppins como data URI e produz uma
+página sem nenhuma requisição externa — para abrir offline com duplo clique, enviar
+por e-mail/WhatsApp ou publicar onde a política de segurança bloqueia CDNs.
 
 ## Estrutura
 
@@ -44,6 +55,9 @@ src/
   App.jsx                     # apenas renderiza a landing
   main.jsx                    # bootstrap do React
   index.css                   # Tailwind + utilitários .glass / .glass-gold / .gold-text
+  assets/                     # logos, badges e fotos oficiais + README de procedência
+scripts/
+  build-standalone.mjs        # gera a versão em arquivo único
 tailwind.config.js            # keyframes float / shine / pulse-ring
 index.html                    # meta tags, OG e fonte Poppins
 ```

@@ -4,6 +4,10 @@
  *
  * Stack: React 18 + Tailwind CSS + lucide-react + framer-motion
  *
+ * Todos os logos, badges de trilha e fotos em `src/assets/` foram extraídos dos
+ * arquivos oficiais da marca — Manual de Marca RF Group e Folder Connect Academy
+ * 2026 — e não recriados. Ver `src/assets/README.md` para a procedência de cada um.
+ *
  * Paleta oficial (Manual de Marca RF Group):
  *   Dark Navy  #14193C   |  Amarelo Ouro #F5CD55
  *   Cinza      #727272   |  Branco       #FFFFFF
@@ -36,6 +40,18 @@ import {
   Users,
   X,
 } from 'lucide-react'
+
+/* Assets oficiais da marca (extraídos do Manual de Marca e do Folder 2026) */
+import logoConnectAcademy from './assets/logo-connect-academy.png'
+import logoConnectMed from './assets/logo-connect-med.webp'
+import target3d from './assets/target-3d.webp'
+import badgeG360 from './assets/badge-g360.png'
+import badgeRh from './assets/badge-rh.png'
+import badgeIa from './assets/badge-ia.png'
+import badgeTributario from './assets/badge-tributario.png'
+import badgeGrowbase from './assets/badge-growbase.png'
+import fotoEvento1 from './assets/evento-1.webp'
+import fotoEvento2 from './assets/evento-2.webp'
 
 /* -------------------------------------------------------------------------- */
 /*  Dados da página — centralizados para facilitar a manutenção comercial      */
@@ -74,6 +90,8 @@ const TRACKS = [
     id: 'connect-med',
     nome: 'Connect Med',
     icon: Stethoscope,
+    // O card em destaque exibe o lockup 3D oficial no lugar do badge circular
+    lockup: logoConnectMed,
     destaque: true,
     slogan: 'Medicina com visão de negócio.',
     chamada: 'Gestão e estratégia para uma carreira médica mais sustentável.',
@@ -91,6 +109,7 @@ const TRACKS = [
     id: 'g360',
     nome: 'Gestão 360° | G360',
     icon: Briefcase,
+    badge: badgeG360,
     slogan: 'Quem enxerga o todo, decide melhor.',
     chamada: 'Enxergue a empresa por inteiro.',
     descricao:
@@ -107,6 +126,7 @@ const TRACKS = [
     id: 'connect-rh',
     nome: 'Connect RH',
     icon: Users,
+    badge: badgeRh,
     slogan: 'Empresas fortes começam com pessoas alinhadas.',
     chamada: 'Pessoas, cultura e estratégia na mesma direção.',
     descricao:
@@ -123,6 +143,7 @@ const TRACKS = [
     id: 'connect-ia',
     nome: 'Connect IA',
     icon: Cpu,
+    badge: badgeIa,
     slogan: 'A IA não substitui estratégia. Ela potencializa quem sabe executar.',
     chamada: 'Inteligência artificial aplicada ao trabalho real.',
     descricao:
@@ -139,6 +160,7 @@ const TRACKS = [
     id: 'connect-tributario',
     nome: 'Connect Tributário',
     icon: Scale,
+    badge: badgeTributario,
     slogan: 'Quem entende antes, adapta-se melhor.',
     chamada: 'Prepare sua empresa para o novo cenário fiscal.',
     descricao:
@@ -155,6 +177,7 @@ const TRACKS = [
     id: 'growbase',
     nome: 'GrowBase',
     icon: TrendingUp,
+    badge: badgeGrowbase,
     // Fecha a grade em largura total, equilibrando a linha final com o card em destaque
     wide: true,
     slogan: 'Escalar não é acelerar no escuro. É construir uma base sólida.',
@@ -220,20 +243,14 @@ function Reveal({ children, delay = 0, className = '' }) {
 /*  Blocos visuais reutilizáveis                                               */
 /* -------------------------------------------------------------------------- */
 
-function Logo({ compact = false }) {
+function Logo({ className = 'h-11' }) {
   return (
-    <a href="#topo" className="group flex items-center gap-3" aria-label="Connect Academy — início">
-      <span className="relative flex h-11 w-11 items-center justify-center rounded-full bg-[#F5CD55] shadow-[0_0_28px_-6px_rgba(245,205,85,0.85)] transition-transform duration-300 group-hover:scale-105">
-        <Target className="h-6 w-6 text-[#14193C]" strokeWidth={2.4} />
-      </span>
-      <span className={compact ? 'sr-only' : 'leading-none'}>
-        <span className="block text-lg font-extrabold tracking-[0.18em] text-white sm:text-xl">
-          C<span className="text-[#F5CD55]">O</span>NNECT
-        </span>
-        <span className="block text-[0.6rem] font-semibold tracking-[0.55em] text-[#F5CD55] sm:text-xs">
-          ACADEMY
-        </span>
-      </span>
+    <a href="#topo" className="group inline-flex items-center" aria-label="Connect Academy — início">
+      <img
+        src={logoConnectAcademy}
+        alt="Connect Academy"
+        className={`${className} w-auto transition-transform duration-300 group-hover:scale-[1.03]`}
+      />
     </a>
   )
 }
@@ -575,10 +592,14 @@ function Hero() {
             <div className="glass relative overflow-hidden p-8 sm:p-10">
               <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#F5CD55]/60 to-transparent" />
 
-              <div className="flex justify-center">
-                <div className="relative flex h-32 w-32 animate-float items-center justify-center rounded-full bg-gradient-to-br from-[#F5CD55] to-[#d9ab34] shadow-[0_0_70px_-12px_rgba(245,205,85,0.7)]">
-                  <Target className="h-16 w-16 text-[#14193C]" strokeWidth={1.8} />
-                </div>
+              <div className="relative flex justify-center">
+                {/* Halo dourado para o alvo 3D destacar-se do navy */}
+                <div className="pointer-events-none absolute left-1/2 top-1/2 h-48 w-48 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#F5CD55]/25 blur-[55px] sm:h-56 sm:w-56" />
+                <img
+                  src={target3d}
+                  alt="Símbolo do Connect Academy"
+                  className="relative h-36 w-auto animate-float drop-shadow-[0_18px_45px_rgba(0,0,0,0.55)] sm:h-44"
+                />
               </div>
 
               <p className="mt-8 text-center text-xl font-bold leading-snug text-white sm:text-2xl">
@@ -657,7 +678,22 @@ function About() {
             </Reveal>
           </div>
 
-          <div className="grid gap-5 sm:grid-cols-2">
+          <div className="space-y-5">
+            <Reveal>
+              <figure className="glass relative overflow-hidden">
+                <img
+                  src={fotoEvento2}
+                  alt="Participantes durante uma imersão presencial do Connect Academy"
+                  className="h-56 w-full object-cover sm:h-64"
+                />
+                <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#14193C] via-[#14193C]/30 to-transparent" />
+                <figcaption className="absolute inset-x-0 bottom-0 p-6 text-sm font-semibold leading-snug text-white">
+                  Turmas reduzidas, troca real entre quem decide.
+                </figcaption>
+              </figure>
+            </Reveal>
+
+            <div className="grid gap-5 sm:grid-cols-2">
             {[
               {
                 icon: Briefcase,
@@ -690,6 +726,7 @@ function About() {
                 </div>
               </Reveal>
             ))}
+            </div>
           </div>
         </div>
       </div>
@@ -722,23 +759,40 @@ function TrackCard({ track, index }) {
           </span>
         )}
 
-        <div className="relative flex items-center gap-4">
-          <span
-            className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl transition-all duration-300 ${
-              destaque
-                ? 'bg-[#F5CD55] text-[#14193C]'
-                : 'border border-[#F5CD55]/25 bg-[#F5CD55]/10 text-[#F5CD55] group-hover:bg-[#F5CD55] group-hover:text-[#14193C]'
-            }`}
-          >
-            <Icon className="h-7 w-7" strokeWidth={2} />
-          </span>
-          <div className="min-w-0">
-            <h3 className="text-xl font-extrabold leading-tight text-white sm:text-2xl">
-              {track.nome}
-            </h3>
-            <p className="mt-1 text-sm font-medium text-[#F5CD55]">{track.chamada}</p>
+        {track.lockup ? (
+          /* Card em destaque: lockup 3D oficial da marca */
+          <div className="relative">
+            <img
+              src={track.lockup}
+              alt={track.nome}
+              className="h-16 w-auto drop-shadow-[0_10px_30px_rgba(0,0,0,0.5)] sm:h-20"
+            />
+            <h3 className="sr-only">{track.nome}</h3>
+            <p className="mt-4 text-sm font-medium text-[#F5CD55] sm:text-base">{track.chamada}</p>
           </div>
-        </div>
+        ) : (
+          <div className="relative flex items-center gap-4">
+            {track.badge ? (
+              /* Badge circular oficial da trilha */
+              <img
+                src={track.badge}
+                alt=""
+                aria-hidden="true"
+                className="h-16 w-16 shrink-0 rounded-full ring-1 ring-[#F5CD55]/25 transition-all duration-300 group-hover:ring-[#F5CD55]/70"
+              />
+            ) : (
+              <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-[#F5CD55]/25 bg-[#F5CD55]/10 text-[#F5CD55] transition-all duration-300 group-hover:bg-[#F5CD55] group-hover:text-[#14193C]">
+                <Icon className="h-7 w-7" strokeWidth={2} />
+              </span>
+            )}
+            <div className="min-w-0">
+              <h3 className="text-xl font-extrabold leading-tight text-white sm:text-2xl">
+                {track.nome}
+              </h3>
+              <p className="mt-1 text-sm font-medium text-[#F5CD55]">{track.chamada}</p>
+            </div>
+          </div>
+        )}
 
         <p className="relative mt-6 text-sm leading-relaxed text-white/60">{track.descricao}</p>
 
@@ -862,7 +916,19 @@ function Why() {
 
         {/* Faixa de datas */}
         <Reveal delay={0.2}>
-          <div className="glass-gold mt-12 flex flex-col items-center justify-between gap-6 p-8 text-center sm:p-10 lg:flex-row lg:text-left">
+          <div className="glass-gold relative mt-12 overflow-hidden p-8 text-center sm:p-10 lg:text-left">
+            {/* Foto de uma imersão real, sob véu navy para preservar o contraste do texto */}
+            <div className="pointer-events-none absolute inset-0">
+              <img
+                src={fotoEvento1}
+                alt=""
+                aria-hidden="true"
+                className="h-full w-full object-cover object-center"
+              />
+              <div className="absolute inset-0 bg-gradient-to-r from-[#14193C] via-[#14193C]/85 to-[#14193C]/45" />
+            </div>
+
+            <div className="relative flex flex-col items-center justify-between gap-6 lg:flex-row lg:text-left">
             <div className="flex flex-col items-center gap-6 sm:flex-row sm:items-center">
               <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[#F5CD55] text-[#14193C]">
                 <Calendar className="h-7 w-7" strokeWidth={2.2} />
@@ -889,6 +955,7 @@ function Why() {
               Garantir vaga
               <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
             </PrimaryButton>
+            </div>
           </div>
         </Reveal>
       </div>
@@ -910,8 +977,13 @@ function FinalCTA() {
 
       <div className="mx-auto max-w-4xl px-5 text-center sm:px-8">
         <Reveal>
-          <div className="mx-auto flex h-20 w-20 animate-float items-center justify-center rounded-full bg-gradient-to-br from-[#F5CD55] to-[#d9ab34] shadow-[0_0_60px_-10px_rgba(245,205,85,0.75)]">
-            <Target className="h-10 w-10 text-[#14193C]" strokeWidth={1.9} />
+          <div className="relative mx-auto w-fit">
+            <div className="pointer-events-none absolute left-1/2 top-1/2 h-36 w-36 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#F5CD55]/25 blur-[50px]" />
+            <img
+              src={target3d}
+              alt="Símbolo do Connect Academy"
+              className="relative h-24 w-auto animate-float drop-shadow-[0_18px_45px_rgba(0,0,0,0.55)] sm:h-28"
+            />
           </div>
         </Reveal>
 
