@@ -17,7 +17,7 @@
  * com Tailwind configurado.
  */
 
-import { useEffect, useState } from 'react'
+import { useEffect, useId, useState } from 'react'
 import { motion } from 'framer-motion'
 import {
   ArrowRight,
@@ -25,17 +25,17 @@ import {
   Calendar,
   CheckCircle2,
   ChevronDown,
+  Compass,
   Cpu,
   Instagram,
+  Layers,
   Lightbulb,
   MapPin,
   Menu,
   MessageCircle,
   Network,
   Scale,
-  Sparkles,
   Stethoscope,
-  Target,
   TrendingUp,
   Users,
   X,
@@ -255,6 +255,42 @@ function Logo({ className = 'h-11' }) {
   )
 }
 
+/**
+ * Marca do Connect Academy — alvo com flecha, desenhada a partir do símbolo do logo
+ * oficial. Vetorial e em `currentColor`, para ficar nítida a partir de 14px, onde a
+ * versão em bitmap embaçaria. Um recorte (mask) abre o vão nos anéis por onde a
+ * flecha passa, como no original.
+ */
+function ConnectMark({ className = 'h-3.5 w-3.5', ...props }) {
+  const id = useId()
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+      focusable="false"
+      {...props}
+    >
+      <mask id={id}>
+        <rect width="24" height="24" fill="#fff" />
+        <line x1="10.5" y1="13.5" x2="23" y2="1" stroke="#000" strokeWidth="5" strokeLinecap="round" />
+      </mask>
+      <g mask={`url(#${id})`}>
+        <circle cx="10.5" cy="13.5" r="8.8" />
+        <circle cx="10.5" cy="13.5" r="5" />
+      </g>
+      <circle cx="10.5" cy="13.5" r="1.9" fill="currentColor" />
+      <path d="M10.5 13.5 L19.6 4.4" />
+      <path d="M15.2 3.4 L20.6 3.4 L20.6 8.8" />
+    </svg>
+  )
+}
+
 function Badge({ children, className = '' }) {
   return (
     <span
@@ -294,7 +330,7 @@ function SectionHeading({ eyebrow, title, highlight, description, center = true 
       {eyebrow && (
         <Reveal>
           <Badge>
-            <Sparkles className="h-3.5 w-3.5" />
+            <ConnectMark className="h-3.5 w-3.5" />
             {eyebrow}
           </Badge>
         </Reveal>
@@ -701,12 +737,12 @@ function About() {
                 texto: 'Empresários, gestores, líderes e equipes que precisam de resultado.',
               },
               {
-                icon: Target,
+                icon: Layers,
                 titulo: 'Desafios reais',
                 texto: 'Gestão, estratégia, pessoas, tecnologia e crescimento na prática.',
               },
               {
-                icon: Sparkles,
+                icon: Compass,
                 titulo: 'Método antes de teoria',
                 texto: 'Conteúdo aplicável, transformado em rotina e processo na sua empresa.',
               },
