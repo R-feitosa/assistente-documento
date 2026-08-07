@@ -52,6 +52,8 @@ import badgeTributario from './assets/badge-tributario.png'
 import badgeGrowbase from './assets/badge-growbase.png'
 import fotoEvento1 from './assets/evento-1.webp'
 import fotoEvento2 from './assets/evento-2.webp'
+import fotoEquipeMed from './assets/connect-med-equipe.webp'
+import selo20Vagas from './assets/selo-20-vagas.png'
 
 /* -------------------------------------------------------------------------- */
 /*  Dados da página — centralizados para facilitar a manutenção comercial      */
@@ -90,9 +92,11 @@ const TRACKS = [
     id: 'connect-med',
     nome: 'Connect Med',
     icon: Stethoscope,
-    // O card em destaque exibe o lockup 3D oficial no lugar do badge circular
+    // Ganha bloco próprio, em largura total, fora da grade das demais trilhas
     lockup: logoConnectMed,
     destaque: true,
+    // Os três eixos anunciados no folder, exibidos como selos
+    eixos: ['Gestão Médica 360°', 'Inteligência Comercial', 'Tributário p/ médicos'],
     slogan: 'Medicina com visão de negócio.',
     chamada: 'Gestão e estratégia para uma carreira médica mais sustentável.',
     descricao:
@@ -774,61 +778,145 @@ function About() {
 /*  Trilhas / Imersões                                                         */
 /* -------------------------------------------------------------------------- */
 
+/**
+ * Bloco de destaque do Connect Med — largura total, tratamento cinematográfico e a
+ * foto da dupla que abre o folder impresso. Fica fora da grade das demais trilhas
+ * justamente para não competir com elas.
+ */
+function FeaturedMed({ track }) {
+  return (
+    <Reveal>
+      <article
+        id={track.id}
+        className="relative overflow-hidden rounded-[2rem] border border-[#F5CD55]/35 bg-[linear-gradient(125deg,#0B1130_0%,#14193C_42%,#1B2A63_100%)] shadow-[0_40px_90px_-40px_rgba(0,0,0,0.9)]"
+      >
+        {/* Feixes de luz azul e halo dourado, como na capa do folder */}
+        <div className="pointer-events-none absolute inset-0">
+          <div className="absolute -left-24 top-0 h-72 w-72 rounded-full bg-[#2C57C4]/25 blur-[110px]" />
+          <div className="absolute bottom-0 right-1/3 h-80 w-80 rounded-full bg-[#F5CD55]/10 blur-[120px]" />
+          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#F5CD55]/60 to-transparent" />
+        </div>
+
+        <div className="relative grid lg:grid-cols-[1.04fr_0.96fr]">
+          {/* Conteúdo */}
+          <div className="p-8 sm:p-11 lg:p-14">
+            <span className="inline-flex items-center gap-2 rounded-full bg-[#F5CD55] px-4 py-1.5 text-[0.6rem] font-extrabold uppercase tracking-[0.2em] text-[#14193C]">
+              <ConnectMark className="h-3.5 w-3.5" />
+              Imersão em destaque
+            </span>
+
+            <img
+              src={track.lockup}
+              alt={track.nome}
+              className="mt-7 h-20 w-auto drop-shadow-[0_14px_40px_rgba(0,0,0,0.6)] sm:h-24 lg:h-28"
+            />
+            <h3 className="sr-only">{track.nome}</h3>
+
+            <p className="mt-5 text-base font-semibold text-[#F5CD55] sm:text-lg">
+              {track.chamada}
+            </p>
+
+            <p className="mt-5 max-w-xl text-sm leading-relaxed text-white/65 sm:text-base">
+              {track.descricao}
+            </p>
+
+            {/* Os três eixos do programa, no formato de selo da capa do folder */}
+            <ul className="mt-7 flex flex-wrap gap-2.5">
+              {track.eixos.map((eixo) => (
+                <li
+                  key={eixo}
+                  className="rounded-xl border border-[#5B8BD0]/40 bg-gradient-to-b from-[#1B2A63]/80 to-[#111a45]/80 px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-white shadow-[inset_0_1px_0_0_rgba(255,255,255,0.12)] sm:text-[0.8rem]"
+                >
+                  {eixo}
+                </li>
+              ))}
+            </ul>
+
+            <div className="mt-8 flex flex-wrap items-center gap-x-8 gap-y-4 border-t border-white/10 pt-7">
+              <div>
+                <p className="text-[0.6rem] font-semibold uppercase tracking-[0.22em] text-white/45">
+                  Pré-evento
+                </p>
+                <p className="mt-1 text-xl font-extrabold text-white">18 FEV</p>
+              </div>
+              <div>
+                <p className="text-[0.6rem] font-semibold uppercase tracking-[0.22em] text-white/45">
+                  Imersão
+                </p>
+                <p className="mt-1 text-xl font-extrabold text-white">19 E 20 FEV</p>
+              </div>
+              <img
+                src={selo20Vagas}
+                alt="Apenas 20 vagas"
+                className="h-14 w-auto drop-shadow-[0_10px_26px_rgba(245,205,85,0.35)] sm:h-16"
+              />
+            </div>
+
+            <p className="mt-7 rounded-2xl border-l-2 border-[#F5CD55] bg-[#F5CD55]/[0.07] px-5 py-4 text-sm font-semibold italic leading-snug text-white sm:text-base">
+              “{track.slogan}”
+            </p>
+
+            <PrimaryButton
+              href={waLink(
+                `Olá! Tenho interesse na imersão ${track.nome} do Connect Academy. Pode me enviar mais informações?`,
+              )}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-7"
+            >
+              <MessageCircle className="h-5 w-5" strokeWidth={2.4} />
+              Quero o Connect Med
+            </PrimaryButton>
+          </div>
+
+          {/* Foto — encosta na base do bloco, como no folder */}
+          <div className="relative min-h-[380px] sm:min-h-[440px] lg:min-h-0">
+            {/* object-contain mantém a foto dentro da própria coluna, sem invadir o texto */}
+            <img
+              src={fotoEquipeMed}
+              alt="Especialistas que conduzem a imersão Connect Med"
+              className="absolute inset-0 h-full w-full object-contain object-bottom lg:object-right-bottom"
+            />
+          </div>
+        </div>
+      </article>
+    </Reveal>
+  )
+}
+
 function TrackCard({ track, index }) {
   const Icon = track.icon
-  const destaque = Boolean(track.destaque)
-  const largo = destaque || Boolean(track.wide)
+  const largo = Boolean(track.wide)
 
   return (
     <Reveal delay={Math.min(index, 3) * 0.08} className={largo ? 'md:col-span-2' : ''}>
       <article
         id={track.id}
-        className={`group relative flex h-full flex-col overflow-hidden p-7 transition-all duration-300 hover:-translate-y-1.5 sm:p-8 ${
-          destaque ? 'glass-gold hover:border-[#F5CD55]/60' : 'glass hover:border-[#F5CD55]/35'
-        }`}
+        className="glass group relative flex h-full flex-col overflow-hidden p-7 transition-all duration-300 hover:-translate-y-1.5 hover:border-[#F5CD55]/35 sm:p-8"
       >
         <div className="pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full bg-[#F5CD55]/10 blur-3xl transition-opacity duration-500 group-hover:opacity-100 sm:opacity-0" />
 
-        {destaque && (
-          <span className="absolute right-6 top-6 rounded-full bg-[#F5CD55] px-3 py-1 text-[0.6rem] font-extrabold uppercase tracking-[0.18em] text-[#14193C]">
-            Em destaque
-          </span>
-        )}
-
-        {track.lockup ? (
-          /* Card em destaque: lockup 3D oficial da marca */
-          <div className="relative">
+        <div className="relative flex items-center gap-4">
+          {track.badge ? (
+            /* Badge circular oficial da trilha */
             <img
-              src={track.lockup}
-              alt={track.nome}
-              className="h-16 w-auto drop-shadow-[0_10px_30px_rgba(0,0,0,0.5)] sm:h-20"
+              src={track.badge}
+              alt=""
+              aria-hidden="true"
+              className="h-16 w-16 shrink-0 rounded-full ring-1 ring-[#F5CD55]/25 transition-all duration-300 group-hover:ring-[#F5CD55]/70"
             />
-            <h3 className="sr-only">{track.nome}</h3>
-            <p className="mt-4 text-sm font-medium text-[#F5CD55] sm:text-base">{track.chamada}</p>
+          ) : (
+            <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-[#F5CD55]/25 bg-[#F5CD55]/10 text-[#F5CD55] transition-all duration-300 group-hover:bg-[#F5CD55] group-hover:text-[#14193C]">
+              <Icon className="h-7 w-7" strokeWidth={2} />
+            </span>
+          )}
+          <div className="min-w-0">
+            <h3 className="text-xl font-extrabold leading-tight text-white sm:text-2xl">
+              {track.nome}
+            </h3>
+            <p className="mt-1 text-sm font-medium text-[#F5CD55]">{track.chamada}</p>
           </div>
-        ) : (
-          <div className="relative flex items-center gap-4">
-            {track.badge ? (
-              /* Badge circular oficial da trilha */
-              <img
-                src={track.badge}
-                alt=""
-                aria-hidden="true"
-                className="h-16 w-16 shrink-0 rounded-full ring-1 ring-[#F5CD55]/25 transition-all duration-300 group-hover:ring-[#F5CD55]/70"
-              />
-            ) : (
-              <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-[#F5CD55]/25 bg-[#F5CD55]/10 text-[#F5CD55] transition-all duration-300 group-hover:bg-[#F5CD55] group-hover:text-[#14193C]">
-                <Icon className="h-7 w-7" strokeWidth={2} />
-              </span>
-            )}
-            <div className="min-w-0">
-              <h3 className="text-xl font-extrabold leading-tight text-white sm:text-2xl">
-                {track.nome}
-              </h3>
-              <p className="mt-1 text-sm font-medium text-[#F5CD55]">{track.chamada}</p>
-            </div>
-          </div>
-        )}
+        </div>
 
         <p className="relative mt-6 text-sm leading-relaxed text-white/60">{track.descricao}</p>
 
@@ -884,8 +972,16 @@ function Tracks() {
           description="Seis trilhas construídas para resolver problemas reais de gestão. Todas presenciais, práticas e com turmas de no máximo 20 participantes."
         />
 
-        <div className="mt-14 grid gap-6 md:grid-cols-2">
-          {TRACKS.map((track, i) => (
+        <div className="mt-14">
+          <FeaturedMed track={TRACKS.find((t) => t.destaque)} />
+        </div>
+
+        <p className="mt-14 text-center text-[0.65rem] font-semibold uppercase tracking-[0.24em] text-white/35">
+          As demais trilhas
+        </p>
+
+        <div className="mt-6 grid gap-6 md:grid-cols-2">
+          {TRACKS.filter((t) => !t.destaque).map((track, i) => (
             <TrackCard key={track.id} track={track} index={i} />
           ))}
         </div>

@@ -20,18 +20,21 @@ originais** enviados pela marca e apenas recortados, aparados e otimizados para 
 | `badge-growbase.png` | FD p.2 — badge GrowBase | idem |
 | `evento-1.webp` | FD p.2 — foto de imersão | recorte, redimensionamento, WebP q80 |
 | `evento-2.webp` | FD p.2 — foto de imersão | idem |
+| `connect-med-equipe.webp` | FD p.1 — os dois recortes de pessoa | recompostos na mesma disposição da capa (um atrás à esquerda, outro à frente à direita), com esvaecimento na base |
+| `selo-20-vagas.png` | FD p.1 — selo "APENAS 20 VAGAS" | recorte a 400 dpi, fundo removido por luminância |
 
 ## Onde cada um aparece
 
 - **Logo Connect Academy** — navbar e rodapé
 - **Alvo 3D** — card do hero e CTA final
-- **Lockup Connect Med** — cabeçalho do card em destaque, no lugar do badge circular
-- **Badges** — cabeçalho dos demais cards de trilha
+- **Lockup Connect Med**, **foto da dupla** e **selo de 20 vagas** — bloco de destaque
+  do Connect Med, em largura total, acima da grade das demais trilhas
+- **Badges** — cabeçalho dos cards das outras cinco trilhas
 - **Fotos de imersão** — seção "Sobre" e faixa de datas em "Por que participar"
 
-## Não incluído de propósito
+## Pendência
 
-O folder traz **fotos de duas pessoas** (p. 1), extraíveis com recorte limpo. Não foram
-usadas porque o material não informa nome nem papel de cada uma, e colocá-las numa landing
-page as apresentaria implicitamente como mentores ou fundadores. Para incluí-las, basta
-informar quem são e como devem ser creditadas.
+As duas pessoas da foto do Connect Med aparecem **sem legenda**, porque o folder não
+informa nome nem papel de nenhuma delas. O `alt` da imagem está genérico
+("Especialistas que conduzem a imersão Connect Med"). Informe quem são para creditá-las
+corretamente — tanto no `alt` quanto, se fizer sentido, numa legenda visível no bloco.
