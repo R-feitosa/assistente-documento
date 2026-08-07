@@ -32,22 +32,47 @@
   }
 }
 
+/**
+ * NÃO acrescente `backdrop-blur` aqui.
+ *
+ * Estes cards ficam sobre um navy praticamente chapado, então o desfoque de fundo
+ * não tinha o que desfocar — a comparação pixel a pixel entre com e sem ficou
+ * indistinguível. Em compensação, cada elemento com `backdrop-filter` vira uma
+ * camada de composição que o navegador reprocessa a cada quadro: com ~30 deles a
+ * página rodava a 28 fps mesmo em máquina rápida, e a 60 fps sem eles.
+ *
+ * O desfoque ficou só no cabeçalho fixo, onde de fato existe conteúdo rolando
+ * atrás — dois elementos, custo irrelevante.
+ */
 @layer components {
-  /* Glassmorphism em tom navy #14193C */
+  /* Vidro em tom navy #14193C, obtido por transparência e borda, sem desfoque */
   .glass {
-    @apply rounded-3xl border border-white/10 bg-white/[0.04] backdrop-blur-xl;
+    @apply rounded-3xl border border-white/10 bg-white/[0.04];
     box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.06), 0 24px 60px -24px rgba(0, 0, 0, 0.75);
   }
 
   .glass-gold {
-    @apply rounded-3xl border border-[#F5CD55]/30 backdrop-blur-xl;
+    @apply rounded-3xl border border-[#F5CD55]/30;
     background: linear-gradient(160deg, rgba(245, 205, 85, 0.1) 0%, rgba(20, 25, 60, 0.55) 55%);
     box-shadow: inset 0 1px 0 0 rgba(245, 205, 85, 0.18), 0 24px 60px -24px rgba(245, 205, 85, 0.25);
+  }
+
+  /**
+   * Halo difuso sem `filter: blur()`.
+   *
+   * Um degradê radial produz a mesma queda suave que um círculo desfocado, mas é
+   * pintado direto — sem a passagem de desfoque, que em raios de 90–150px custava
+   * caro e era re-rasterizada junto das animações. Cor e alcance vêm das variáveis.
+   */
+  .halo {
+    background: radial-gradient(closest-side, var(--halo-cor, rgba(245, 205, 85, 0.14)), transparent);
   }
 
   .gold-text {
     background: linear-gradient(100deg, #f5cd55 0%, #fff0bf 35%, #f5cd55 60%, #d9ab34 100%);
     background-size: 200% auto;
+    /* Posição de repouso: sem ela o degradê estático mostraria a ponta escura */
+    background-position: 60% center;
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;

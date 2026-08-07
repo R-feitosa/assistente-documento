@@ -415,7 +415,7 @@ function AnimatedTarget({ className = 'h-24', delay = 0, alt = 'Símbolo do Conn
 function Badge({ children, className = '' }) {
   return (
     <span
-      className={`inline-flex items-center gap-2 rounded-full border border-[#F5CD55]/40 bg-[#F5CD55]/10 px-4 py-1.5 text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[#F5CD55] backdrop-blur-sm sm:text-xs ${className}`}
+      className={`inline-flex items-center gap-2 rounded-full border border-[#F5CD55]/40 bg-[#F5CD55]/10 px-4 py-1.5 text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[#F5CD55] sm:text-xs ${className}`}
     >
       {children}
     </span>
@@ -438,7 +438,7 @@ function GhostButton({ href, children, className = '' }) {
   return (
     <a
       href={href}
-      className={`group inline-flex items-center justify-center gap-2.5 rounded-full border border-white/20 bg-white/[0.04] px-7 py-4 text-sm font-semibold text-white backdrop-blur-xl transition-all duration-300 hover:-translate-y-0.5 hover:border-[#F5CD55]/60 hover:text-[#F5CD55] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#F5CD55] focus-visible:ring-offset-2 focus-visible:ring-offset-[#14193C] sm:text-base ${className}`}
+      className={`group inline-flex items-center justify-center gap-2.5 rounded-full border border-white/20 bg-white/[0.04] px-7 py-4 text-sm font-semibold text-white transition-all duration-300 hover:-translate-y-0.5 hover:border-[#F5CD55]/60 hover:text-[#F5CD55] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#F5CD55] focus-visible:ring-offset-2 focus-visible:ring-offset-[#14193C] sm:text-base ${className}`}
     >
       {children}
     </a>
@@ -458,7 +458,7 @@ function SectionHeading({ eyebrow, title, highlight, description, center = true 
       )}
       <Reveal delay={0.08}>
         <h2 className="mt-6 text-3xl font-extrabold leading-tight tracking-tight text-white sm:text-4xl lg:text-[2.75rem]">
-          {title} {highlight && <span className="gold-text animate-shine">{highlight}</span>}
+          {title} {highlight && <span className="gold-text">{highlight}</span>}
         </h2>
       </Reveal>
       {description && (
@@ -533,7 +533,7 @@ function Navbar() {
             onClick={() => setOpen((v) => !v)}
             aria-label={open ? 'Fechar menu' : 'Abrir menu'}
             aria-expanded={open}
-            className="flex h-11 w-11 items-center justify-center rounded-full border border-white/15 bg-white/[0.04] text-white backdrop-blur-xl transition-colors hover:border-[#F5CD55]/50 hover:text-[#F5CD55] lg:hidden"
+            className="flex h-11 w-11 items-center justify-center rounded-full border border-white/15 bg-white/[0.04] text-white transition-colors hover:border-[#F5CD55]/50 hover:text-[#F5CD55] lg:hidden"
           >
             {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
@@ -615,7 +615,7 @@ function ScarcityCard() {
 
   return (
     <div className="glass-gold relative overflow-hidden p-6 sm:p-7">
-      <div className="pointer-events-none absolute -right-10 -top-10 h-36 w-36 rounded-full bg-[#F5CD55]/20 blur-3xl" />
+      <div className="pointer-events-none absolute -right-10 -top-10 h-36 w-36 rounded-full halo" style={{ '--halo-cor': 'rgba(245,205,85,0.20)' }} />
 
       <div className="relative flex items-start gap-4">
         <span className="mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#F5CD55] text-[#14193C]">
@@ -640,7 +640,7 @@ function ScarcityCard() {
             {blocos.map((b) => (
               <div
                 key={b.label}
-                className="rounded-2xl border border-white/10 bg-[#14193C]/60 py-3 text-center backdrop-blur-sm"
+                className="rounded-2xl border border-white/10 bg-[#14193C]/60 py-3 text-center"
               >
                 <span className="block text-xl font-extrabold tabular-nums text-[#F5CD55] sm:text-2xl">
                   {String(b.valor).padStart(2, '0')}
@@ -663,8 +663,8 @@ function Hero() {
       {/* Fundo: degradês suaves navy + halos dourados */}
       <div className="pointer-events-none absolute inset-0 -z-10">
         <div className="absolute inset-0 bg-[radial-gradient(120%_90%_at_50%_-10%,#1d2455_0%,#14193C_45%,#0D1129_100%)]" />
-        <div className="absolute -left-40 top-24 h-[26rem] w-[26rem] rounded-full bg-[#F5CD55]/10 blur-[130px]" />
-        <div className="absolute -right-32 top-1/3 h-[30rem] w-[30rem] rounded-full bg-[#F5CD55]/[0.07] blur-[150px]" />
+        <div className="absolute -left-40 top-24 h-[26rem] w-[26rem] rounded-full halo" style={{ '--halo-cor': 'rgba(245,205,85,0.13)' }} />
+        <div className="absolute -right-32 top-1/3 h-[30rem] w-[30rem] rounded-full halo" style={{ '--halo-cor': 'rgba(245,205,85,0.09)' }} />
         <div
           className="absolute inset-0 opacity-[0.35]"
           style={{
@@ -744,14 +744,17 @@ function Hero() {
         {/* Coluna visual */}
         <Reveal delay={0.2}>
           <div className="relative">
-            <div className="pointer-events-none absolute -inset-8 -z-10 rounded-full bg-[#F5CD55]/10 blur-[90px]" />
+            <div className="pointer-events-none absolute -inset-8 -z-10 rounded-full halo" style={{ '--halo-cor': 'rgba(245,205,85,0.13)' }} />
 
             <div className="glass relative overflow-hidden p-8 sm:p-10">
               <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#F5CD55]/60 to-transparent" />
 
               <div className="relative flex justify-center">
                 {/* Halo dourado para o alvo 3D destacar-se do navy */}
-                <div className="pointer-events-none absolute left-1/2 top-1/2 h-48 w-48 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#F5CD55]/25 blur-[55px] sm:h-56 sm:w-56" />
+                <div
+                  className="pointer-events-none absolute left-1/2 top-1/2 h-48 w-48 -translate-x-1/2 -translate-y-1/2 rounded-full halo sm:h-56 sm:w-56"
+                  style={{ '--halo-cor': 'rgba(245,205,85,0.30)' }}
+                />
                 <span className="relative animate-float">
                   <AnimatedTarget className="h-36 sm:h-44" delay={0.35} />
                 </span>
@@ -770,7 +773,7 @@ function Hero() {
                 ].map((item) => (
                   <div
                     key={item.texto}
-                    className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 backdrop-blur-sm"
+                    className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3"
                   >
                     <item.icon className="h-4 w-4 shrink-0 text-[#F5CD55]" />
                     <span className="text-sm font-medium text-white/80">{item.texto}</span>
@@ -816,7 +819,7 @@ function About() {
               <div className="glass-gold mt-10 p-7 sm:p-8">
                 <p className="text-lg font-bold leading-snug text-white sm:text-xl">
                   Aqui, conhecimento se transforma em{' '}
-                  <span className="gold-text animate-shine">
+                  <span className="gold-text">
                     método, decisões melhores e resultados sustentáveis.
                   </span>
                 </p>
@@ -907,8 +910,8 @@ function FeaturedMed({ track }) {
       >
         {/* Feixes de luz azul e halo dourado, como na capa do folder */}
         <div className="pointer-events-none absolute inset-0">
-          <div className="absolute -left-24 top-0 h-72 w-72 rounded-full bg-[#2C57C4]/25 blur-[110px]" />
-          <div className="absolute bottom-0 right-1/3 h-80 w-80 rounded-full bg-[#F5CD55]/10 blur-[120px]" />
+          <div className="absolute -left-24 top-0 h-72 w-72 rounded-full halo" style={{ '--halo-cor': 'rgba(44,87,196,0.30)' }} />
+          <div className="absolute bottom-0 right-1/3 h-80 w-80 rounded-full halo" style={{ '--halo-cor': 'rgba(245,205,85,0.13)' }} />
           <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#F5CD55]/60 to-transparent" />
         </div>
 
@@ -1009,7 +1012,10 @@ function TrackCard({ track, index }) {
         id={track.id}
         className="glass group relative flex h-full flex-col overflow-hidden p-7 transition-all duration-300 hover:-translate-y-1.5 hover:border-[#F5CD55]/35 sm:p-8"
       >
-        <div className="pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full bg-[#F5CD55]/10 blur-3xl transition-opacity duration-500 group-hover:opacity-100 sm:opacity-0" />
+        <div
+          className="pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full halo transition-opacity duration-500 group-hover:opacity-100 sm:opacity-0"
+          style={{ '--halo-cor': 'rgba(245,205,85,0.12)' }}
+        />
 
         <div className="relative flex items-center gap-4">
           {track.badge ? (
@@ -1076,7 +1082,7 @@ function Tracks() {
       className="relative overflow-hidden border-t border-white/[0.06] py-24 sm:py-28"
     >
       <div className="pointer-events-none absolute inset-0 -z-10 bg-[#14193C]">
-        <div className="absolute left-1/2 top-0 h-96 w-[42rem] -translate-x-1/2 rounded-full bg-[#F5CD55]/[0.06] blur-[140px]" />
+        <div className="absolute left-1/2 top-0 h-96 w-[42rem] -translate-x-1/2 rounded-full halo" style={{ '--halo-cor': 'rgba(245,205,85,0.08)' }} />
       </div>
 
       <div className="mx-auto max-w-7xl px-5 sm:px-8">
@@ -1219,13 +1225,13 @@ function FinalCTA() {
     <section id="contato" className="relative overflow-hidden py-24 sm:py-32">
       <div className="pointer-events-none absolute inset-0 -z-10">
         <div className="absolute inset-0 bg-[radial-gradient(90%_80%_at_50%_100%,#1d2455_0%,#14193C_55%,#0D1129_100%)]" />
-        <div className="absolute bottom-0 left-1/2 h-96 w-[46rem] -translate-x-1/2 rounded-full bg-[#F5CD55]/10 blur-[130px]" />
+        <div className="absolute bottom-0 left-1/2 h-96 w-[46rem] -translate-x-1/2 rounded-full halo" style={{ '--halo-cor': 'rgba(245,205,85,0.13)' }} />
       </div>
 
       <div className="mx-auto max-w-4xl px-5 text-center sm:px-8">
         <Reveal>
           <div className="relative mx-auto w-fit">
-            <div className="pointer-events-none absolute left-1/2 top-1/2 h-36 w-36 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#F5CD55]/25 blur-[50px]" />
+            <div className="pointer-events-none absolute left-1/2 top-1/2 h-36 w-36 -translate-x-1/2 -translate-y-1/2 rounded-full halo" style={{ '--halo-cor': 'rgba(245,205,85,0.30)' }} />
             <span className="relative block animate-float">
               <AnimatedTarget className="h-24 sm:h-28" />
             </span>
@@ -1235,7 +1241,7 @@ function FinalCTA() {
         <Reveal delay={0.1}>
           <h2 className="mt-9 text-3xl font-extrabold leading-tight tracking-tight text-white sm:text-5xl">
             Sua empresa está pronta para o{' '}
-            <span className="gold-text animate-shine">próximo nível?</span>
+            <span className="gold-text">próximo nível?</span>
           </h2>
         </Reveal>
 
